@@ -1,0 +1,5 @@
+{
+  "name": "FlexLogic HIIT",
+  "description": "An intelligent gym tracker that adapts to machine availability and fatigue levels, managing progressive overload automatically.",
+  "requestFramePermissions": []
+}
