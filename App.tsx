@@ -1,21 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { Dumbbell, Calendar, BarChart2, Plus, Home, Settings } from 'lucide-react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Dumbbell, Calendar, BarChart2, Plus, Home, Settings, Clock } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog, SetLog } from './types';
 import { getTemplates, getSessions, saveSession, getLastLogForExercise } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
 import { SessionPlanner } from './components/SessionPlanner';
+import { ScheduleView } from './components/ScheduleView';
+import { ProgressView } from './components/ProgressView';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'planner' | 'active'>('home');
+  const [view, setView] = useState<'home' | 'planner' | 'active' | 'schedule' | 'progress'>('home');
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  
+  // Timer State
+  const [timer, setTimer] = useState(0);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     refreshData();
   }, [view]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (view === 'active') {
+        const startTime = Date.now() - (timer * 1000); // Handle re-renders keeping relative time
+        timerRef.current = window.setInterval(() => {
+            setTimer(Math.floor((Date.now() - startTime) / 1000));
+        }, 1000);
+    } else {
+        if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+        }
+    }
+    return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [view]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const refreshData = () => {
     setTemplates(getTemplates());
@@ -103,9 +136,11 @@ const App: React.FC = () => {
       name: template.name,
       date: new Date().toISOString(),
       completed: false,
+      duration: 0,
       exercises: adjustedExercises
     };
     setActiveSession(newSession);
+    setTimer(0);
     setView('active');
   };
 
@@ -179,15 +214,81 @@ const App: React.FC = () => {
 
   const finishSession = () => {
     if (activeSession) {
-      saveSession({ ...activeSession, completed: true });
+      saveSession({ ...activeSession, completed: true, duration: timer });
       setActiveSession(null);
+      setTimer(0);
       setView('home');
     }
   };
 
+  // Render Navbar Helper
+  const renderNavbar = () => (
+    <nav className="fixed bottom-0 left-0 right-0 bg-gym-900/95 backdrop-blur border-t border-gym-800 p-2 pb-6 flex justify-around z-50">
+        <button 
+          onClick={() => setView('home')} 
+          className="flex flex-col items-center justify-center w-16"
+        >
+          <div className={`p-1.5 rounded-lg border-2 transition-all duration-200 mb-1 ${
+            view === 'home' 
+              ? 'border-gym-accent text-gym-accent bg-gym-accent/10 shadow-[0_0_10px_rgba(59,130,246,0.3)]' 
+              : 'border-transparent text-gray-500'
+          }`}>
+             <Dumbbell size={20} strokeWidth={2.5} />
+          </div>
+          <span className={`text-[10px] font-bold ${view === 'home' ? 'text-gym-accent' : 'text-gray-500'}`}>Gym</span>
+        </button>
+
+        <button 
+          onClick={() => setView('schedule')}
+          className="flex flex-col items-center justify-center w-16"
+        >
+           <div className={`p-1.5 rounded-lg border-2 transition-all duration-200 mb-1 ${
+            view === 'schedule' 
+              ? 'border-gym-accent text-gym-accent bg-gym-accent/10 shadow-[0_0_10px_rgba(59,130,246,0.3)]' 
+              : 'border-transparent text-gray-500'
+           }`}>
+             <Calendar size={20} strokeWidth={2.5} />
+           </div>
+          <span className={`text-[10px] font-bold ${view === 'schedule' ? 'text-gym-accent' : 'text-gray-500'}`}>Schedule</span>
+        </button>
+
+        <button 
+          onClick={() => setView('progress')}
+          className="flex flex-col items-center justify-center w-16"
+        >
+          <div className={`p-1.5 rounded-lg border-2 transition-all duration-200 mb-1 ${
+            view === 'progress' 
+              ? 'border-gym-accent text-gym-accent bg-gym-accent/10 shadow-[0_0_10px_rgba(59,130,246,0.3)]' 
+              : 'border-transparent text-gray-500'
+          }`}>
+            <BarChart2 size={20} strokeWidth={2.5} />
+          </div>
+          <span className={`text-[10px] font-bold ${view === 'progress' ? 'text-gym-accent' : 'text-gray-500'}`}>Progress</span>
+        </button>
+      </nav>
+  );
+
   // Views
   if (view === 'planner') {
     return <SessionPlanner onClose={() => setView('home')} />;
+  }
+
+  if (view === 'schedule') {
+    return (
+      <div className="relative">
+         <ScheduleView />
+         {renderNavbar()}
+      </div>
+    );
+  }
+
+  if (view === 'progress') {
+    return (
+      <div className="relative">
+        <ProgressView />
+        {renderNavbar()}
+      </div>
+    );
   }
 
   if (view === 'active' && activeSession) {
@@ -195,17 +296,25 @@ const App: React.FC = () => {
     
     return (
       <div className="min-h-screen bg-gym-900 pb-20">
-        <header className="sticky top-0 bg-gym-900/90 backdrop-blur-md z-10 p-4 border-b border-gym-700 flex justify-between items-center shadow-lg">
-          <div>
-            <h1 className="text-white font-bold text-lg">{activeSession.name}</h1>
-            <div className="flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-gym-success animate-pulse"></span>
-               <p className="text-gym-accent text-xs font-bold tracking-wider">LIVE GYM SESSION</p>
-            </div>
+        <header className="sticky top-0 bg-gym-900/90 backdrop-blur-md z-10 px-4 py-3 border-b border-gym-700 relative flex justify-center items-center shadow-lg h-16">
+          
+          {/* Absolute Left */}
+          <div className="absolute left-4 max-w-[30%]">
+            <h1 className="text-white font-bold text-lg truncate leading-tight">{activeSession.name}</h1>
           </div>
-          <button onClick={finishSession} className="bg-gym-success text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-green-900/50 hover:bg-green-600 transition-all active:scale-95">
-            Finish Workout
-          </button>
+
+          {/* Center Timer */}
+          <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gym-800 border border-gym-700 shadow-inner min-w-[100px] justify-center">
+            <Clock size={16} className="text-gym-accent animate-pulse" />
+            <span className="text-white font-mono text-lg font-bold tracking-widest">{formatTime(timer)}</span>
+          </div>
+
+          {/* Absolute Right */}
+          <div className="absolute right-4">
+            <button onClick={finishSession} className="bg-gym-success text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-green-900/50 hover:bg-green-600 transition-all active:scale-95">
+              Finish
+            </button>
+          </div>
         </header>
         
         <div className="p-4 space-y-4">
@@ -309,7 +418,7 @@ const App: React.FC = () => {
                    </div>
                    <div className="text-right">
                       <div className="text-gym-success font-bold text-sm">Completed</div>
-                      <div className="text-xs text-gray-500">{s.exercises.length} Exercises</div>
+                      <div className="text-xs text-gray-500">{s.duration ? formatTime(s.duration) : '~'}</div>
                    </div>
                 </div>
               ))}
@@ -318,21 +427,7 @@ const App: React.FC = () => {
         )}
       </div>
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-gym-900/95 backdrop-blur border-t border-gym-800 p-4 pb-6 flex justify-around z-50">
-        <button onClick={() => setView('home')} className={`flex flex-col items-center ${view === 'home' ? 'text-gym-accent' : 'text-gray-500'}`}>
-          <Home size={24} />
-          <span className="text-[10px] font-bold mt-1">Gym</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-500">
-          <Calendar size={24} />
-          <span className="text-[10px] font-bold mt-1">Schedule</span>
-        </button>
-        <button className="flex flex-col items-center text-gray-500">
-          <BarChart2 size={24} />
-          <span className="text-[10px] font-bold mt-1">Progress</span>
-        </button>
-      </nav>
+      {renderNavbar()}
     </div>
   );
 };

@@ -1,11 +1,12 @@
 
-import { WorkoutSession, SessionTemplate } from '../types';
+import { WorkoutSession, SessionTemplate, ScheduledSession } from '../types';
 import { DEFAULT_TEMPLATES } from '../constants';
 
 const KEYS = {
   SESSIONS: 'flexlogic_sessions',
   TEMPLATES: 'flexlogic_templates',
-  HISTORY: 'flexlogic_history'
+  HISTORY: 'flexlogic_history',
+  SCHEDULE: 'flexlogic_schedule'
 };
 
 export const getTemplates = (): SessionTemplate[] => {
@@ -67,4 +68,21 @@ export const getLastLogForExercise = (exerciseId: string): { weight: number, suc
     }
   }
   return null;
+};
+
+// Schedule Functions
+export const getScheduledSessions = (): ScheduledSession[] => {
+  const stored = localStorage.getItem(KEYS.SCHEDULE);
+  return stored ? JSON.parse(stored) : [];
+};
+
+export const saveScheduledSession = (scheduled: ScheduledSession) => {
+  const schedule = getScheduledSessions().filter(s => s.date !== scheduled.date); // Remove existing for that date
+  schedule.push(scheduled);
+  localStorage.setItem(KEYS.SCHEDULE, JSON.stringify(schedule));
+};
+
+export const removeScheduledSession = (date: string) => {
+  const schedule = getScheduledSessions().filter(s => s.date !== date);
+  localStorage.setItem(KEYS.SCHEDULE, JSON.stringify(schedule));
 };

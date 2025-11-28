@@ -48,6 +48,7 @@ export interface WorkoutSession {
   name: string;
   date: string; // ISO date string
   completed: boolean;
+  duration: number; // Duration in seconds
   exercises: ExerciseSessionLog[];
 }
 
@@ -57,4 +58,9 @@ export interface SessionTemplate {
   exerciseIds: string[];
   defaultSets: number;
   defaultReps: number;
+}
+
+export interface ScheduledSession {
+  date: string; // YYYY-MM-DD
+  templateId: string;
 }
