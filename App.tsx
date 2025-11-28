@@ -149,20 +149,13 @@ const App: React.FC = () => {
     const newExercises = [...activeSession.exercises];
     const idx = newExercises.findIndex(e => e.order === updatedLog.order);
     
-    // If user manually changes weight in the UI, we should update the baseWeight 
-    // so the logic persists. 
-    // Heuristic: If user updates set 1 weight, update baseWeight.
     if (idx >= 0) {
-      // Check if weight changed manually
-      const oldWeight = newExercises[idx].sets[0].weight;
-      const newWeight = updatedLog.sets[0].weight;
-      
-      if (oldWeight !== newWeight) {
-        // Reverse engineer base weight: newBase = newWeight / fatigueMultiplier
-        // Or simpler: Just set baseWeight to newWeight (assuming user knows best what they can lift NOW)
-        // and let future fatigue calcs use this new baseline.
-        updatedLog.baseWeight = newWeight; 
-      }
+      // Check if weight changed manually.
+      // We update baseWeight to the user's latest 'intent'.
+      // The most accurate representation of what the user can lift "Fresh" (or at least their new standard)
+      // is the weight they ended the exercise with.
+      const lastSetWeight = updatedLog.sets[updatedLog.sets.length - 1].weight;
+      updatedLog.baseWeight = lastSetWeight;
       
       newExercises[idx] = updatedLog;
     }

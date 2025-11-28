@@ -34,6 +34,11 @@ export const ExerciseCard: React.FC<Props> = ({
   // Progressive Overload Logic (Visual Indicator)
   const isOverloadReady = log.sets.every(s => s.repsCompleted >= log.targetReps && s.completed);
 
+  // Determine which weight to display (Current active set or last set)
+  const currentSetIndex = log.sets.findIndex(s => !s.completed);
+  const displayIndex = currentSetIndex === -1 ? log.sets.length - 1 : currentSetIndex;
+  const displayWeight = log.sets[displayIndex]?.weight || 0;
+
   const handleSetToggle = (setIndex: number) => {
     const newSets = [...log.sets];
     const set = newSets[setIndex];
@@ -59,13 +64,21 @@ export const ExerciseCard: React.FC<Props> = ({
   };
 
   const adjustWeight = (delta: number) => {
-    // Only adjust future/incomplete sets or all sets if none started
-    const anyStarted = log.sets.some(s => s.completed);
+    // Only adjust future/incomplete sets to preserve history of completed sets.
+    // If we haven't started (index 0), adjust all.
+    // If we finished set 1, adjust set 2, 3, 4.
     
+    let startIndex = log.sets.findIndex(s => !s.completed);
+    
+    // If all are completed, assume user wants to correct the last set or adjust plan for a redo?
+    // Let's default to adjusting the last set if all are done, to allow correction.
+    if (startIndex === -1) {
+        startIndex = log.sets.length - 1;
+    }
+
     const newSets = log.sets.map((s, i) => {
-        // If set is already done, maybe don't change it? 
-        // User request: "adaptable... weight must be lower".
-        // Usually we want to adjust all sets if we realize weight is wrong.
+        // Don't touch completed sets before the active one
+        if (i < startIndex) return s; 
         return { ...s, weight: Math.max(0, s.weight + delta) };
     });
     onUpdateLog({ ...log, sets: newSets });
@@ -189,10 +202,10 @@ export const ExerciseCard: React.FC<Props> = ({
        <div className="bg-gym-900/50 p-4 border-t border-gym-700/50">
         <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-gym-900 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
-                <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight</span>
+                <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight (Set {displayIndex + 1})</span>
                 <div className="flex items-center gap-3 mt-4">
                 <button onClick={() => adjustWeight(-WEIGHT_INCREMENT)} className="w-8 h-8 rounded-full bg-gym-800 border border-gym-600 text-white flex items-center justify-center text-lg active:bg-gym-700 active:scale-95 transition-all">-</button>
-                <span className="text-xl font-mono font-bold text-white w-14 text-center">{log.sets[0]?.weight || 0}</span>
+                <span className="text-xl font-mono font-bold text-white w-14 text-center">{displayWeight}</span>
                 <button onClick={() => adjustWeight(WEIGHT_INCREMENT)} className="w-8 h-8 rounded-full bg-gym-800 border border-gym-600 text-white flex items-center justify-center text-lg active:bg-gym-700 active:scale-95 transition-all">+</button>
                 </div>
                 <span className="text-[10px] text-gray-600 mt-1">kg</span>
