@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar, ChevronRight, Plus, Trash2, X, Dumbbell } from 'lucide-react';
 import { SessionTemplate, ScheduledSession } from '../types';
@@ -56,10 +55,10 @@ export const ScheduleView: React.FC<Props> = () => {
   const days = generateDays();
 
   return (
-    <div className="min-h-screen bg-gym-900 text-white pb-24 p-6 pt-10">
+    <div className="min-h-screen bg-gym-900 text-gym-text pb-24 p-6 pt-10">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-gym-accent">Schedule</h1>
-        <p className="text-gray-400">Plan your upcoming workouts</p>
+        <h1 className="text-3xl font-bold text-gym-secondary">Schedule</h1>
+        <p className="text-gym-muted">Plan your upcoming workouts</p>
       </header>
 
       <div className="space-y-4">
@@ -77,15 +76,15 @@ export const ScheduleView: React.FC<Props> = () => {
                     rounded-xl p-4 border transition-all cursor-pointer
                     ${scheduled 
                         ? 'bg-gym-800 border-gym-700 hover:border-gym-accent' 
-                        : 'bg-gym-800/30 border-gym-800 border-dashed hover:bg-gym-800 hover:border-gym-600'
+                        : 'bg-white/40 border-gym-700 border-dashed hover:bg-gym-800 hover:border-gym-600'
                     }
-                    ${isToday ? 'ring-1 ring-gym-accent ring-offset-2 ring-offset-gym-900' : ''}
+                    ${isToday ? 'ring-2 ring-gym-accent' : ''}
                   `}
                   onClick={() => !scheduled && setSelectedDate(day.dateStr)}
                 >
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg ${isToday ? 'bg-gym-accent text-white' : 'bg-gym-900 text-gray-400'}`}>
+                            <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg ${isToday ? 'bg-gym-accent text-white' : 'bg-gym-700 text-gym-text'}`}>
                                 <span className="text-[10px] uppercase font-bold">{day.dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
                                 <span className="text-lg font-bold leading-none">{day.dateObj.getDate()}</span>
                             </div>
@@ -93,11 +92,11 @@ export const ScheduleView: React.FC<Props> = () => {
                             <div>
                                 {scheduled && template ? (
                                     <>
-                                        <h3 className="font-bold text-white text-lg">{template.name}</h3>
-                                        <p className="text-xs text-gray-400">{template.exerciseIds.length} Exercises</p>
+                                        <h3 className="font-bold text-gym-text text-lg">{template.name}</h3>
+                                        <p className="text-xs text-gym-muted">{template.exerciseIds.length} Exercises</p>
                                     </>
                                 ) : (
-                                    <span className="text-gray-500 font-medium">Rest Day</span>
+                                    <span className="text-gym-muted font-medium">Rest Day</span>
                                 )}
                             </div>
                         </div>
@@ -105,7 +104,7 @@ export const ScheduleView: React.FC<Props> = () => {
                         {scheduled ? (
                             <button 
                                 onClick={(e) => handleRemove(day.dateStr, e)}
-                                className="p-2 text-gray-500 hover:text-red-500 transition-colors"
+                                className="p-2 text-gym-muted hover:text-red-500 transition-colors"
                             >
                                 <Trash2 size={18} />
                             </button>
@@ -126,25 +125,25 @@ export const ScheduleView: React.FC<Props> = () => {
         <div className="fixed inset-0 bg-gym-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-gym-800 w-full max-w-md rounded-2xl border border-gym-700 shadow-2xl overflow-hidden">
                 <div className="p-4 border-b border-gym-700 flex justify-between items-center">
-                    <h3 className="font-bold text-white">Select Routine</h3>
-                    <button onClick={() => setSelectedDate(null)} className="text-gray-400 hover:text-white"><X /></button>
+                    <h3 className="font-bold text-gym-text">Select Routine</h3>
+                    <button onClick={() => setSelectedDate(null)} className="text-gym-muted hover:text-gym-accent"><X /></button>
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto p-2">
                     {templates.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500">No templates found. Create one in the Gym tab first.</div>
+                        <div className="p-8 text-center text-gym-muted">No templates found. Create one in the Gym tab first.</div>
                     ) : (
                         templates.map(tpl => (
                             <button
                                 key={tpl.id}
                                 onClick={() => handleAssignTemplate(tpl.id)}
-                                className="w-full text-left p-4 hover:bg-gym-700 rounded-xl transition-colors border-b border-gym-700/50 last:border-0 group"
+                                className="w-full text-left p-4 hover:bg-gym-700/50 rounded-xl transition-colors border-b border-gym-700/50 last:border-0 group"
                             >
                                 <div className="flex justify-between items-center">
                                     <div>
-                                        <span className="font-bold text-white block group-hover:text-gym-accent transition-colors">{tpl.name}</span>
-                                        <span className="text-xs text-gray-500">{tpl.exerciseIds.length} Exercises</span>
+                                        <span className="font-bold text-gym-text block group-hover:text-gym-accent transition-colors">{tpl.name}</span>
+                                        <span className="text-xs text-gym-muted">{tpl.exerciseIds.length} Exercises</span>
                                     </div>
-                                    <ChevronRight size={16} className="text-gray-600 group-hover:text-white" />
+                                    <ChevronRight size={16} className="text-gym-muted group-hover:text-gym-accent" />
                                 </div>
                             </button>
                         ))

@@ -2,7 +2,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Exercise } from '../types';
 
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY || ''; 
+  // Safe access to process.env.API_KEY for browser environments
+  const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) || ''; 
   if (!apiKey) {
     console.warn("API Key not found in process.env");
     return null;

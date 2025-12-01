@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { ExerciseSessionLog, SetLog, MuscleGroup, Equipment } from '../types';
 import { EXERCISES, WEIGHT_INCREMENT } from '../constants';
-import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown } from 'lucide-react';
+import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus } from 'lucide-react';
 import { getAlternativeExercise } from '../services/geminiService';
 
 interface Props {
@@ -96,25 +95,25 @@ export const ExerciseCard: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-gym-800 rounded-xl p-0 mb-4 border border-gym-700 shadow-lg relative overflow-hidden transition-all duration-300">
+    <div className="bg-gym-800 rounded-xl p-0 mb-4 border border-gym-700 shadow-sm relative overflow-hidden transition-all duration-300">
        {/* Card Header */}
        <div className="flex justify-between items-start p-4 bg-gym-800">
          <div>
            <div className="flex items-center gap-2 mb-1">
-             <span className="text-[10px] font-bold text-gym-900 bg-gym-accent px-1.5 py-0.5 rounded">
+             <span className="text-[10px] font-bold text-white bg-gym-accent px-1.5 py-0.5 rounded">
                #{index + 1}
              </span>
-             <h4 className="text-white font-bold text-lg leading-tight">{exercise.name}</h4>
+             <h4 className="text-gym-text font-bold text-lg leading-tight">{exercise.name}</h4>
            </div>
-           <div className="flex items-center gap-2 text-gray-400 text-xs">
-             <span className="bg-gym-700 px-1.5 py-0.5 rounded text-gray-300">{exercise.equipment}</span>
+           <div className="flex items-center gap-2 text-gym-muted text-xs">
+             <span className="bg-gym-700 px-1.5 py-0.5 rounded text-gym-text">{exercise.equipment}</span>
              <span>•</span>
              <span>{exercise.muscleGroup}</span>
            </div>
          </div>
          <button 
           onClick={() => setShowSwapMenu(!showSwapMenu)}
-          className={`p-2 rounded-lg transition-colors ${showSwapMenu ? 'bg-gym-700 text-white' : 'text-gray-400 hover:text-white'}`}
+          className={`p-2 rounded-lg transition-colors ${showSwapMenu ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
         >
            <RefreshCw size={18} />
          </button>
@@ -124,13 +123,13 @@ export const ExerciseCard: React.FC<Props> = ({
        {showSwapMenu && (
          <div className="bg-gym-900 border-y border-gym-700 p-4 animate-in slide-in-from-top duration-200">
            <div className="flex justify-between items-center mb-4">
-             <h5 className="font-bold text-white text-sm">Machine Occupied / Swap</h5>
+             <h5 className="font-bold text-gym-text text-sm">Machine Occupied / Swap</h5>
            </div>
            
            <div className="space-y-3">
              {/* Option 1: Swap with predefined */}
              <div>
-               <p className="text-[10px] text-gray-500 mb-2 uppercase font-bold tracking-wider">Similar Alternatives</p>
+               <p className="text-[10px] text-gym-muted mb-2 uppercase font-bold tracking-wider">Similar Alternatives</p>
                <div className="grid grid-cols-1 gap-2">
                {exercise.defaultAlternatives.length > 0 ? (
                  exercise.defaultAlternatives.map(altId => (
@@ -141,15 +140,15 @@ export const ExerciseCard: React.FC<Props> = ({
                       className="w-full text-left p-2.5 bg-gym-800 rounded-lg border border-gym-700 hover:border-gym-accent flex justify-between items-center"
                     >
                       <div>
-                        <div className="font-bold text-sm text-white">{EXERCISES[altId].name}</div>
-                        <div className="text-[10px] text-gray-500">{EXERCISES[altId].equipment}</div>
+                        <div className="font-bold text-sm text-gym-text">{EXERCISES[altId].name}</div>
+                        <div className="text-[10px] text-gym-muted">{EXERCISES[altId].equipment}</div>
                       </div>
                       <RefreshCw size={14} className="text-gym-accent"/>
                     </button>
                    )
                  ))
                ) : (
-                 <p className="text-xs text-gray-600 italic">No predefined alternatives.</p>
+                 <p className="text-xs text-gym-muted italic">No predefined alternatives.</p>
                )}
                </div>
              </div>
@@ -157,7 +156,7 @@ export const ExerciseCard: React.FC<Props> = ({
              {/* Option 2: Swap Order */}
              {availableExercises.filter(e => e.order > index).length > 0 && (
                 <div className="mt-4">
-                    <p className="text-[10px] text-gray-500 mb-2 uppercase font-bold tracking-wider">Do Later (Swap Order)</p>
+                    <p className="text-[10px] text-gym-muted mb-2 uppercase font-bold tracking-wider">Do Later (Swap Order)</p>
                     <div className="space-y-2">
                     {availableExercises.filter(e => e.order > index).map((laterEx) => {
                     const laterName = EXERCISES[laterEx.exerciseId]?.name;
@@ -168,8 +167,8 @@ export const ExerciseCard: React.FC<Props> = ({
                         className="w-full text-left p-2.5 bg-gym-800 rounded-lg border border-gym-700 hover:border-gym-warning flex justify-between items-center"
                         >
                         <div>
-                            <span className="font-bold text-sm text-white block">Swap with {laterName}</span>
-                            <span className="text-[10px] text-gray-500">Currently #{laterEx.order + 1}</span>
+                            <span className="font-bold text-sm text-gym-text block">Swap with {laterName}</span>
+                            <span className="text-[10px] text-gym-muted">Currently #{laterEx.order + 1}</span>
                         </div>
                         <ChevronDown size={14} className="text-gym-warning"/>
                         </button>
@@ -184,12 +183,12 @@ export const ExerciseCard: React.FC<Props> = ({
                 <button 
                   onClick={handleAiSuggest}
                   disabled={aiLoading}
-                  className="flex items-center gap-2 text-xs font-bold text-white w-full justify-center p-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg shadow-lg"
+                  className="flex items-center gap-2 text-xs font-bold text-white w-full justify-center p-3 bg-gradient-to-r from-gym-accent to-gym-secondary rounded-lg shadow-lg hover:brightness-110 transition-all"
                 >
                   <Brain size={16} /> {aiLoading ? 'Asking Coach...' : 'Suggest AI Alternative'}
                 </button>
                 {aiSuggestion && (
-                  <div className="mt-3 p-3 bg-indigo-900/30 border border-indigo-500/30 rounded text-xs text-indigo-200 whitespace-pre-wrap leading-relaxed">
+                  <div className="mt-3 p-3 bg-gym-800 border border-gym-600 rounded text-xs text-gym-muted whitespace-pre-wrap leading-relaxed">
                     {aiSuggestion}
                   </div>
                 )}
@@ -199,23 +198,37 @@ export const ExerciseCard: React.FC<Props> = ({
        )}
 
        {/* Controls Area */}
-       <div className="bg-gym-900/50 p-4 border-t border-gym-700/50">
+       <div className="bg-white/50 p-4 border-t border-gym-700/50">
         <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-gym-900 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
-                <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight (Set {displayIndex + 1})</span>
-                <div className="flex items-center gap-3 mt-4">
-                <button onClick={() => adjustWeight(-WEIGHT_INCREMENT)} className="w-8 h-8 rounded-full bg-gym-800 border border-gym-600 text-white flex items-center justify-center text-lg active:bg-gym-700 active:scale-95 transition-all">-</button>
-                <span className="text-xl font-mono font-bold text-white w-14 text-center">{displayWeight}</span>
-                <button onClick={() => adjustWeight(WEIGHT_INCREMENT)} className="w-8 h-8 rounded-full bg-gym-800 border border-gym-600 text-white flex items-center justify-center text-lg active:bg-gym-700 active:scale-95 transition-all">+</button>
+            {/* WEIGHT CONTROL */}
+            <div className="bg-gym-800 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
+                <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight (Set {displayIndex + 1})</span>
+                <div className="flex items-center gap-4 mt-5 mb-1">
+                  <button 
+                    onClick={() => adjustWeight(-WEIGHT_INCREMENT)} 
+                    className="p-2 text-gym-muted hover:text-gym-accent active:scale-90 transition-transform"
+                    aria-label="Decrease weight"
+                  >
+                    <Minus size={24} />
+                  </button>
+                  <span className="text-3xl font-mono font-bold text-gym-text w-20 text-center tracking-tighter">{displayWeight}</span>
+                  <button 
+                    onClick={() => adjustWeight(WEIGHT_INCREMENT)} 
+                    className="p-2 text-gym-accent hover:text-gym-secondary active:scale-90 transition-transform"
+                    aria-label="Increase weight"
+                  >
+                    <Plus size={24} />
+                  </button>
                 </div>
-                <span className="text-[10px] text-gray-600 mt-1">kg</span>
+                <span className="text-[10px] text-gym-muted">kg</span>
             </div>
-            <div className="bg-gym-900 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
-            <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider absolute top-2">Target</span>
-            <div className="text-white font-bold mt-4 text-xl">
-                {log.targetSets} <span className="text-gray-600 text-sm">x</span> {log.targetReps}
+
+            <div className="bg-gym-800 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
+            <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Target</span>
+            <div className="text-gym-text font-bold mt-4 text-xl">
+                {log.targetSets} <span className="text-gym-muted text-sm">x</span> {log.targetReps}
             </div>
-            <span className="text-[10px] text-gray-600 mt-1">sets x reps</span>
+            <span className="text-[10px] text-gym-muted mt-1">sets x reps</span>
             </div>
         </div>
 
@@ -231,15 +244,14 @@ export const ExerciseCard: React.FC<Props> = ({
                     ? 'bg-gym-success border-gym-success text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
                     : set.completed 
                     ? 'bg-gym-warning/20 border-gym-warning text-gym-warning' 
-                    : 'bg-gym-800 border-gym-700 text-gray-500 hover:border-gray-500 hover:bg-gym-700'
+                    : 'bg-gym-800 border-gym-700 text-gym-muted hover:border-gym-accent hover:text-gym-accent'
                 }
                 `}
             >
-                <span className="text-[10px] font-bold mb-0.5 opacity-60">Set {i + 1}</span>
+                <span className="text-[10px] font-bold mb-0.5 opacity-80">Set {i + 1}</span>
                 <span className="text-lg font-mono font-bold leading-none">
                 {set.completed ? set.repsCompleted : '-'}
                 </span>
-                {/* Visual fill bar for progress if partially complete could go here */}
             </button>
             ))}
         </div>
