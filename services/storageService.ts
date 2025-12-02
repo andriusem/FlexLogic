@@ -26,6 +26,11 @@ export const saveTemplate = (template: SessionTemplate) => {
   localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(templates));
 };
 
+export const deleteTemplate = (id: string) => {
+  const templates = getTemplates().filter(t => t.id !== id);
+  localStorage.setItem(KEYS.TEMPLATES, JSON.stringify(templates));
+};
+
 export const getSessions = (): WorkoutSession[] => {
   const stored = localStorage.getItem(KEYS.SESSIONS);
   return stored ? JSON.parse(stored) : [];

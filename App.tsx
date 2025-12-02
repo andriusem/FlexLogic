@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, Clock } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog, SetLog } from './types';
-import { getTemplates, getSessions, saveSession, getLastLogForExercise } from './services/storageService';
+import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -14,6 +15,7 @@ const App: React.FC = () => {
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
   
   // Timer State
   const [timer, setTimer] = useState(0);
@@ -213,6 +215,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleEditTemplate = (tpl: SessionTemplate) => {
+    setEditingTemplate(tpl);
+    setView('planner');
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    if (confirm("Are you sure you want to delete this routine?")) {
+        deleteTemplate(id);
+        refreshData();
+    }
+  };
+
   // Render Navbar Helper
   const renderNavbar = () => (
     <nav className="fixed bottom-0 left-0 right-0 bg-gym-900/95 backdrop-blur border-t border-gym-700 p-2 pb-6 flex justify-around z-50 shadow-[0_-5px_20px_rgba(247,230,202,0.3)]">
@@ -262,7 +276,15 @@ const App: React.FC = () => {
 
   // Views
   if (view === 'planner') {
-    return <SessionPlanner onClose={() => setView('home')} />;
+    return (
+        <SessionPlanner 
+            onClose={() => {
+                setView('home');
+                setEditingTemplate(null);
+            }} 
+            initialTemplate={editingTemplate}
+        />
+    );
   }
 
   if (view === 'schedule') {
@@ -373,7 +395,10 @@ const App: React.FC = () => {
         <section>
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-lg text-gym-text">Start Workout</h2>
-            <button onClick={() => setView('planner')} className="text-white text-sm font-bold flex items-center gap-1 bg-gym-accent px-3 py-1 rounded-full hover:bg-gym-secondary transition-all shadow-md shadow-orange-500/20">
+            <button 
+                onClick={() => { setEditingTemplate(null); setView('planner'); }} 
+                className="text-white text-sm font-bold flex items-center gap-1 bg-gym-accent px-3 py-1 rounded-full hover:bg-gym-secondary transition-all shadow-md shadow-orange-500/20"
+            >
               <Plus size={16} /> New Routine
             </button>
           </div>
@@ -382,7 +407,7 @@ const App: React.FC = () => {
             {templates.length === 0 ? (
                <div className="p-8 bg-gym-800 rounded-xl text-center border border-dashed border-gym-700">
                  <p className="text-gym-muted mb-4">No routines created yet.</p>
-                 <button onClick={() => setView('planner')} className="bg-gym-accent text-white px-6 py-2 rounded-lg font-bold">Create First Routine</button>
+                 <button onClick={() => { setEditingTemplate(null); setView('planner'); }} className="bg-gym-accent text-white px-6 py-2 rounded-lg font-bold">Create First Routine</button>
                </div>
             ) : (
               templates.map(tpl => (
@@ -391,6 +416,8 @@ const App: React.FC = () => {
                   title={tpl.name}
                   subtitle={`${tpl.exerciseIds.length} Exercises • ~${tpl.exerciseIds.length * 5} min`}
                   onStart={() => startSession(tpl)}
+                  onEdit={() => handleEditTemplate(tpl)}
+                  onDelete={() => handleDeleteTemplate(tpl.id)}
                   isTemplate
                 />
               ))

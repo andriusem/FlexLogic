@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { SessionTemplate, Exercise } from '../types';
 import { EXERCISES } from '../constants';
 import { Save, Plus, X, GripVertical, Trash2 } from 'lucide-react';
@@ -6,17 +7,26 @@ import { saveTemplate } from '../services/storageService';
 
 interface Props {
   onClose: () => void;
+  initialTemplate?: SessionTemplate | null;
 }
 
-export const SessionPlanner: React.FC<Props> = ({ onClose }) => {
+export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) => {
   const [sessionName, setSessionName] = useState('');
   const [selectedExIds, setSelectedExIds] = useState<string[]>([]);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
+  useEffect(() => {
+    if (initialTemplate) {
+      setSessionName(initialTemplate.name);
+      setSelectedExIds(initialTemplate.exerciseIds);
+    }
+  }, [initialTemplate]);
+
   const handleSave = () => {
     if (!sessionName || selectedExIds.length === 0) return;
+    
     const newTemplate: SessionTemplate = {
-      id: `tpl-${Date.now()}`,
+      id: initialTemplate ? initialTemplate.id : `tpl-${Date.now()}`,
       name: sessionName,
       exerciseIds: selectedExIds,
       defaultSets: 4,
@@ -42,7 +52,7 @@ export const SessionPlanner: React.FC<Props> = ({ onClose }) => {
   return (
     <div className="fixed inset-0 bg-gym-900 z-50 flex flex-col animate-in slide-in-from-bottom duration-300">
       <div className="bg-gym-800 p-4 pt-10 flex justify-between items-center shadow-sm border-b border-gym-700">
-        <h2 className="text-xl font-bold text-gym-text">Create Routine</h2>
+        <h2 className="text-xl font-bold text-gym-text">{initialTemplate ? 'Edit Routine' : 'Create Routine'}</h2>
         <button onClick={onClose}><X className="text-gym-muted hover:text-gym-accent" /></button>
       </div>
 

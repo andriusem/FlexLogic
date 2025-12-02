@@ -199,25 +199,25 @@ export const ExerciseCard: React.FC<Props> = ({
 
        {/* Controls Area */}
        <div className="bg-white/50 p-4 border-t border-gym-700/50">
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-2 gap-3 mb-4">
             {/* WEIGHT CONTROL */}
             <div className="bg-gym-800 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
                 <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight (Set {displayIndex + 1})</span>
-                <div className="flex items-center gap-4 mt-5 mb-1">
+                <div className="flex items-center justify-between w-full mt-6 mb-1 px-0.5">
                   <button 
                     onClick={() => adjustWeight(-WEIGHT_INCREMENT)} 
-                    className="p-2 text-gym-muted hover:text-gym-accent active:scale-90 transition-transform"
+                    className="p-1 text-gym-muted hover:text-gym-accent active:scale-90 transition-transform"
                     aria-label="Decrease weight"
                   >
-                    <Minus size={24} />
+                    <Minus size={20} />
                   </button>
-                  <span className="text-3xl font-mono font-bold text-gym-text w-20 text-center tracking-tighter">{displayWeight}</span>
+                  <span className="text-2xl sm:text-3xl font-mono font-bold text-gym-text text-center tracking-tighter flex-1 truncate">{displayWeight}</span>
                   <button 
                     onClick={() => adjustWeight(WEIGHT_INCREMENT)} 
-                    className="p-2 text-gym-accent hover:text-gym-secondary active:scale-90 transition-transform"
+                    className="p-1 text-gym-accent hover:text-gym-secondary active:scale-90 transition-transform"
                     aria-label="Increase weight"
                   >
-                    <Plus size={24} />
+                    <Plus size={20} />
                   </button>
                 </div>
                 <span className="text-[10px] text-gym-muted">kg</span>
