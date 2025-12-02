@@ -83,6 +83,36 @@ export const ExerciseCard: React.FC<Props> = ({
     onUpdateLog({ ...log, sets: newSets });
   };
 
+  const adjustSetCount = (delta: number) => {
+    const currentCount = log.sets.length;
+    const newCount = currentCount + delta;
+    
+    if (newCount < 1) return; // Minimum 1 set
+
+    let newSets = [...log.sets];
+
+    if (delta > 0) {
+        // Adding sets
+        // Inherit weight from the last set
+        const lastWeight = newSets[newSets.length - 1]?.weight || log.baseWeight;
+        const setsToAdd = Array(delta).fill(null).map(() => ({
+            repsCompleted: 0,
+            weight: lastWeight,
+            completed: false
+        }));
+        newSets = [...newSets, ...setsToAdd];
+    } else {
+        // Removing sets (remove from end)
+        newSets = newSets.slice(0, delta); // delta is negative here
+    }
+
+    onUpdateLog({ 
+        ...log, 
+        sets: newSets, 
+        targetSets: newCount 
+    });
+  };
+
   const handleAiSuggest = async () => {
     setAiLoading(true);
     const result = await getAlternativeExercise(exercise, exercise.equipment);
@@ -239,23 +269,40 @@ export const ExerciseCard: React.FC<Props> = ({
                 <span className="text-[10px] text-gym-muted">kg</span>
             </div>
 
+            {/* SETS CONTROL */}
             <div className="bg-gym-800 rounded-xl p-2 border border-gym-700 flex flex-col items-center justify-center relative">
-            <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Target</span>
-            <div className="text-gym-text font-bold mt-4 text-xl">
-                {log.targetSets} <span className="text-gym-muted text-sm">x</span> {log.targetReps}
-            </div>
-            <span className="text-[10px] text-gym-muted mt-1">sets x reps</span>
+                <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Sets</span>
+                <div className="flex items-center justify-between w-full mt-6 mb-1 px-1">
+                    <button 
+                        onClick={() => adjustSetCount(-1)} 
+                        className="p-1 text-gym-muted hover:text-gym-accent active:scale-90 transition-transform"
+                        aria-label="Decrease sets"
+                    >
+                        <Minus size={20} />
+                    </button>
+                    <div className="text-gym-text font-bold text-2xl flex flex-col items-center leading-none">
+                        {log.sets.length}
+                        <span className="text-[9px] text-gym-muted font-normal mt-1 opacity-70">TARGET</span>
+                    </div>
+                    <button 
+                        onClick={() => adjustSetCount(1)} 
+                        className="p-1 text-gym-accent hover:text-gym-secondary active:scale-90 transition-transform"
+                        aria-label="Increase sets"
+                    >
+                        <Plus size={20} />
+                    </button>
+                </div>
             </div>
         </div>
 
         {/* Sets Grid */}
-        <div className="flex justify-between gap-2">
+        <div className="grid grid-cols-4 gap-2">
             {log.sets.map((set, i) => (
             <button
                 key={i}
                 onClick={() => handleSetToggle(i)}
                 className={`
-                flex-1 h-14 rounded-lg flex flex-col items-center justify-center transition-all duration-200 border relative overflow-hidden group
+                h-14 rounded-lg flex flex-col items-center justify-center transition-all duration-200 border relative overflow-hidden group
                 ${getSetColorClass(set)}
                 `}
             >
