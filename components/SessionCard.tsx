@@ -28,7 +28,7 @@ export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit,
       <div className="flex gap-2 items-center">
         {/* Admin Controls - Hidden by default, reveal on click */}
         {showOptions && (
-          <div className="flex gap-2 animate-in fade-in slide-in-from-right-4 duration-200 mr-1">
+          <div className="flex gap-2 animate-in fade-in slide-in-from-right-4 duration-200 mr-1 relative z-20">
             {onEdit && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); onEdit(); }} 
@@ -53,7 +53,7 @@ export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit,
         {/* Start Button - Always Visible */}
         <button 
           onClick={(e) => { e.stopPropagation(); onStart(); }} 
-          className={`p-3 rounded-full text-white transition-all shadow-lg shadow-orange-500/20 flex-shrink-0 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`}
+          className={`p-3 rounded-full text-white transition-all shadow-lg shadow-orange-500/20 flex-shrink-0 relative z-20 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`}
           aria-label="Start Workout"
         >
           <Play size={20} fill="currentColor" />
