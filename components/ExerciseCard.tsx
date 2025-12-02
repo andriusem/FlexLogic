@@ -44,17 +44,17 @@ export const ExerciseCard: React.FC<Props> = ({
     
     // Toggle state logic:
     // 1. If not completed -> Mark completed with Target Reps
-    // 2. If completed with target reps -> Decrease by 1 (failure simulation)
-    // 3. If completed with < target reps -> Reset to 0 (incomplete)
+    // 2. If completed and reps > 1 -> Decrease by 1
+    // 3. If completed and reps is 1 -> Reset to Incomplete
     
     if (!set.completed) {
       set.completed = true;
       set.repsCompleted = log.targetReps;
-    } else if (set.repsCompleted >= log.targetReps) {
-       // First tap when complete: assume user failed last rep
-       set.repsCompleted = log.targetReps - 1;
+    } else if (set.repsCompleted > 1) {
+       // Decrease reps
+       set.repsCompleted -= 1;
     } else {
-       // Second tap: reset
+       // Reset
       set.completed = false;
       set.repsCompleted = 0;
     }
