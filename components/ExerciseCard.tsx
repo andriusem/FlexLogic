@@ -94,6 +94,22 @@ export const ExerciseCard: React.FC<Props> = ({
     }
   };
 
+  const getSetColorClass = (set: SetLog) => {
+    if (!set.completed) {
+      return 'bg-gym-800 border-gym-700 text-gym-muted hover:border-gym-accent hover:text-gym-accent';
+    }
+    // Green for 10, 11, 12+
+    if (set.repsCompleted >= 10) {
+      return 'bg-gym-success border-gym-success text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]';
+    }
+    // Yellow for 8, 9
+    if (set.repsCompleted >= 8) {
+      return 'bg-gym-warning border-gym-warning text-white';
+    }
+    // Red for < 8
+    return 'bg-gym-danger border-gym-danger text-white';
+  };
+
   return (
     <div className="bg-gym-800 rounded-xl p-0 mb-4 border border-gym-700 shadow-sm relative overflow-hidden transition-all duration-300">
        {/* Card Header */}
@@ -240,12 +256,7 @@ export const ExerciseCard: React.FC<Props> = ({
                 onClick={() => handleSetToggle(i)}
                 className={`
                 flex-1 h-14 rounded-lg flex flex-col items-center justify-center transition-all duration-200 border relative overflow-hidden group
-                ${set.completed && set.repsCompleted >= log.targetReps 
-                    ? 'bg-gym-success border-gym-success text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
-                    : set.completed 
-                    ? 'bg-gym-warning/20 border-gym-warning text-gym-warning' 
-                    : 'bg-gym-800 border-gym-700 text-gym-muted hover:border-gym-accent hover:text-gym-accent'
-                }
+                ${getSetColorClass(set)}
                 `}
             >
                 <span className="text-[10px] font-bold mb-0.5 opacity-80">Set {i + 1}</span>
