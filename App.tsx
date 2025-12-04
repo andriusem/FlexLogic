@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Calendar, BarChart2, Plus, Settings, Clock, ChevronRight, Layout, X } from 'lucide-react';
-import { WorkoutSession, SessionTemplate, ExerciseSessionLog, SetLog } from './types';
+import React, { useState, useEffect } from 'react';
+import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock } from 'lucide-react';
+import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
 import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
@@ -18,30 +18,8 @@ const App: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
   
-  // Timer State
-  const [timer, setTimer] = useState(0);
-  const timerRef = useRef<number | null>(null);
-
   useEffect(() => {
     refreshData();
-  }, [view]);
-
-  // Timer Effect
-  useEffect(() => {
-    if (view === 'active') {
-        const startTime = Date.now() - (timer * 1000); // Handle re-renders keeping relative time
-        timerRef.current = window.setInterval(() => {
-            setTimer(Math.floor((Date.now() - startTime) / 1000));
-        }, 1000);
-    } else {
-        if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-        }
-    }
-    return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-    };
   }, [view]);
 
   const formatTime = (seconds: number) => {
@@ -145,7 +123,6 @@ const App: React.FC = () => {
       exercises: adjustedExercises
     };
     setActiveSession(newSession);
-    setTimer(0);
     setView('active');
   };
 
@@ -212,9 +189,13 @@ const App: React.FC = () => {
 
   const finishSession = () => {
     if (activeSession) {
-      saveSession({ ...activeSession, completed: true, duration: timer });
+      // Calculate duration based on start time
+      const startTime = new Date(activeSession.date).getTime();
+      const endTime = Date.now();
+      const durationSeconds = Math.floor((endTime - startTime) / 1000);
+
+      saveSession({ ...activeSession, completed: true, duration: durationSeconds });
       setActiveSession(null);
-      setTimer(0);
       setView('home');
     }
   };
@@ -336,14 +317,8 @@ const App: React.FC = () => {
         <header className="sticky top-0 bg-gym-900/90 backdrop-blur-md z-10 px-4 py-3 border-b border-gym-700 relative flex justify-center items-center shadow-sm h-16">
           
           {/* Absolute Left */}
-          <div className="absolute left-4 max-w-[30%]">
+          <div className="absolute left-4 max-w-[50%]">
             <h1 className="text-gym-text font-bold text-lg truncate leading-tight">{activeSession.name}</h1>
-          </div>
-
-          {/* Center Timer */}
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gym-800 border border-gym-700 shadow-inner min-w-[100px] justify-center">
-            <Clock size={16} className="text-gym-accent animate-pulse" />
-            <span className="text-gym-text font-mono text-lg font-bold tracking-widest">{formatTime(timer)}</span>
           </div>
 
           {/* Absolute Right */}
