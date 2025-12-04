@@ -109,6 +109,40 @@ export const DEFAULT_TEMPLATES: SessionTemplate[] = [
     ],
     defaultSets: 4,
     defaultReps: 12
+  },
+  {
+    id: 'tpl-upper',
+    name: 'Upper Body',
+    exerciseIds: [
+      'sm-inc-bp',        // Push: Chest Compound
+      'cab-lat-pd',       // Pull: Lats Vertical
+      'bb-ohp',           // Push: Shoulder Compound
+      'cab-row-seat-ub',  // Pull: Upper Back
+      'pec-deck',         // Push: Chest Iso
+      'mac-iso-pd',       // Pull: Lats Iso
+      'db-lat-raise',     // Push: Shoulder Iso
+      'cab-tri-push',     // Push: Triceps
+      'db-curl-stand',    // Pull: Biceps
+      'cab-oh-ext',       // Push: Tricep Stretch
+      'bb-preach',        // Pull: Bicep Iso
+      'back-ext'          // Pull: Lower Back
+    ],
+    defaultSets: 3,
+    defaultReps: 12
+  },
+  {
+    id: 'tpl-lower',
+    name: 'Lower Body',
+    exerciseIds: [
+      'sq-hack',
+      'leg-press',
+      'leg-ext',
+      'leg-curl-seat',
+      'calf-raise-stand',
+      'hip-thrust-mac'
+    ],
+    defaultSets: 4,
+    defaultReps: 12
   }
 ];
 
