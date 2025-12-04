@@ -70,7 +70,7 @@ export const EXERCISES: Record<string, Exercise> = {
 export const DEFAULT_TEMPLATES: SessionTemplate[] = [
   {
     id: 'tpl-push',
-    name: 'Push Day (Chest/Shoulders/Tris)',
+    name: 'Push Day',
     exerciseIds: [
       'sm-inc-bp',        // Chest Compound
       'pec-deck',         // Chest Isolation
@@ -84,7 +84,7 @@ export const DEFAULT_TEMPLATES: SessionTemplate[] = [
   },
   {
     id: 'tpl-pull',
-    name: 'Pull Day (Back/Biceps)',
+    name: 'Pull Day',
     exerciseIds: [
       'cab-lat-pd',       // Lats Vertical
       'cab-row-seat-ub',  // Upper Back Horizontal
@@ -98,7 +98,7 @@ export const DEFAULT_TEMPLATES: SessionTemplate[] = [
   },
   {
     id: 'tpl-legs',
-    name: 'Leg Day (Quads/Hams/Calves)',
+    name: 'Leg Day',
     exerciseIds: [
       'sq-hack',          // Quad Compound
       'leg-press',        // Compound Volume

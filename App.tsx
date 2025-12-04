@@ -467,7 +467,7 @@ const App: React.FC = () => {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <h4 className="font-bold text-gym-text group-hover:text-gym-accent transition-colors">{tpl.name}</h4>
-                                    <p className="text-xs text-gym-muted">{tpl.exerciseIds.length} Exercises (Standard)</p>
+                                    <p className="text-xs text-gym-muted">{tpl.exerciseIds.length} Exercises</p>
                                 </div>
                                 <div className="bg-gym-accent/10 p-2 rounded-full text-gym-accent">
                                     <Layout size={20} />
