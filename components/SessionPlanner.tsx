@@ -46,15 +46,6 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
     onClose();
   };
 
-  const moveExercise = (index: number, direction: -1 | 1) => {
-    const newItems = [...items];
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= newItems.length) return;
-    
-    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
-    setItems(newItems);
-  };
-
   const removeExercise = (index: number) => {
     setItems(prev => prev.filter((_, i) => i !== index));
   };
@@ -134,24 +125,7 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
                 <div className="flex items-center gap-3 flex-1 overflow-hidden">
                     {/* Drag Handle */}
                     <div className="text-gym-muted group-hover:text-gym-accent cursor-grab active:cursor-grabbing">
-                        <GripVertical size={20} />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); moveExercise(index, -1); }} 
-                            disabled={index === 0} 
-                            className="text-gym-muted hover:text-gym-accent disabled:opacity-20"
-                        >
-                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-current"></div>
-                        </button>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); moveExercise(index, 1); }} 
-                            disabled={index === items.length - 1} 
-                            className="text-gym-muted hover:text-gym-accent disabled:opacity-20"
-                        >
-                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-current"></div>
-                        </button>
+                        <GripVertical size={24} />
                     </div>
                     
                     <div className="truncate">
@@ -163,7 +137,7 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
                     onClick={(e) => { e.stopPropagation(); removeExercise(index); }} 
                     className="p-2 text-gym-700 hover:text-red-500 transition-colors flex-shrink-0 ml-2"
                 >
-                    <Trash2 size={18}/>
+                    <Trash2 size={20}/>
                 </button>
             </div>
             ))}
