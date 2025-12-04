@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SessionTemplate, Exercise } from '../types';
+import { SessionTemplate } from '../types';
 import { EXERCISES } from '../constants';
 import { Save, Plus, X, GripVertical, Trash2 } from 'lucide-react';
 import { saveTemplate } from '../services/storageService';
@@ -10,25 +10,35 @@ interface Props {
   initialTemplate?: SessionTemplate | null;
 }
 
+interface PlannerItem {
+  uid: string;
+  exerciseId: string;
+}
+
 export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) => {
   const [sessionName, setSessionName] = useState('');
-  const [selectedExIds, setSelectedExIds] = useState<string[]>([]);
+  // Use local object state to allow unique keys for DnD even with duplicate exercises
+  const [items, setItems] = useState<PlannerItem[]>([]);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialTemplate) {
       setSessionName(initialTemplate.name);
-      setSelectedExIds(initialTemplate.exerciseIds);
+      setItems(initialTemplate.exerciseIds.map(id => ({
+        uid: Math.random().toString(36).substr(2, 9),
+        exerciseId: id
+      })));
     }
   }, [initialTemplate]);
 
   const handleSave = () => {
-    if (!sessionName || selectedExIds.length === 0) return;
+    if (!sessionName || items.length === 0) return;
     
     const newTemplate: SessionTemplate = {
       id: initialTemplate ? initialTemplate.id : `tpl-${Date.now()}`,
       name: sessionName,
-      exerciseIds: selectedExIds,
+      exerciseIds: items.map(i => i.exerciseId),
       defaultSets: 4,
       defaultReps: 12
     };
@@ -37,16 +47,48 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
   };
 
   const moveExercise = (index: number, direction: -1 | 1) => {
-    const newIds = [...selectedExIds];
+    const newItems = [...items];
     const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= newIds.length) return;
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
     
-    [newIds[index], newIds[targetIndex]] = [newIds[targetIndex], newIds[index]];
-    setSelectedExIds(newIds);
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    setItems(newItems);
   };
 
   const removeExercise = (index: number) => {
-    setSelectedExIds(prev => prev.filter((_, i) => i !== index));
+    setItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addExercise = (id: string) => {
+    setItems(prev => [...prev, { uid: Math.random().toString(36).substr(2, 9), exerciseId: id }]);
+    setIsSelectorOpen(false);
+  };
+
+  const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggingIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    // Required for Firefox to allow drag
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    if (draggingIndex === null || draggingIndex === index) return;
+
+    const newItems = [...items];
+    const draggedItem = newItems[draggingIndex];
+    
+    // Remove from old index
+    newItems.splice(draggingIndex, 1);
+    // Insert at new index
+    newItems.splice(index, 0, draggedItem);
+    
+    setItems(newItems);
+    setDraggingIndex(index);
+  };
+
+  const onDragEnd = () => {
+    setDraggingIndex(null);
   };
 
   return (
@@ -68,27 +110,59 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
             />
         </div>
 
-        <label className="text-xs text-gym-muted uppercase font-bold tracking-wider mb-2 block">Exercises ({selectedExIds.length})</label>
+        <label className="text-xs text-gym-muted uppercase font-bold tracking-wider mb-2 block">Exercises ({items.length})</label>
         
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-            {selectedExIds.length === 0 && (
+            {items.length === 0 && (
             <div className="text-center text-gym-muted py-10 border-2 border-dashed border-gym-700 rounded-xl">
                 Add exercises to start building your routine
             </div>
             )}
-            {selectedExIds.map((id, index) => (
-            <div key={`${id}-${index}`} className="bg-gym-800 p-3 rounded-lg flex items-center justify-between border border-gym-700 group">
-                <div className="flex items-center gap-3">
-                    <div className="flex flex-col gap-1">
-                        <button onClick={() => moveExercise(index, -1)} disabled={index === 0} className="text-gym-muted hover:text-gym-accent disabled:opacity-20"><div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-current"></div></button>
-                        <button onClick={() => moveExercise(index, 1)} disabled={index === selectedExIds.length -1} className="text-gym-muted hover:text-gym-accent disabled:opacity-20"><div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-current"></div></button>
+            {items.map((item, index) => (
+            <div 
+                key={item.uid} 
+                draggable
+                onDragStart={(e) => onDragStart(e, index)}
+                onDragOver={(e) => onDragOver(e, index)}
+                onDragEnd={onDragEnd}
+                className={`
+                    bg-gym-800 p-3 rounded-lg flex items-center justify-between border border-gym-700 group
+                    ${draggingIndex === index ? 'opacity-40 border-dashed border-gym-accent scale-[0.98]' : 'hover:border-gym-accent'}
+                    transition-all cursor-move
+                `}
+            >
+                <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                    {/* Drag Handle */}
+                    <div className="text-gym-muted group-hover:text-gym-accent cursor-grab active:cursor-grabbing">
+                        <GripVertical size={20} />
                     </div>
-                    <div>
-                        <span className="text-gym-text font-bold block">{EXERCISES[id]?.name || 'Unknown'}</span>
-                        <span className="text-xs text-gym-muted">{EXERCISES[id]?.equipment}</span>
+
+                    <div className="flex flex-col gap-1">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); moveExercise(index, -1); }} 
+                            disabled={index === 0} 
+                            className="text-gym-muted hover:text-gym-accent disabled:opacity-20"
+                        >
+                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-current"></div>
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); moveExercise(index, 1); }} 
+                            disabled={index === items.length - 1} 
+                            className="text-gym-muted hover:text-gym-accent disabled:opacity-20"
+                        >
+                            <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-current"></div>
+                        </button>
+                    </div>
+                    
+                    <div className="truncate">
+                        <span className="text-gym-text font-bold block truncate">{EXERCISES[item.exerciseId]?.name || 'Unknown'}</span>
+                        <span className="text-xs text-gym-muted">{EXERCISES[item.exerciseId]?.equipment}</span>
                     </div>
                 </div>
-                <button onClick={() => removeExercise(index)} className="p-2 text-gym-700 hover:text-red-500 transition-colors">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); removeExercise(index); }} 
+                    className="p-2 text-gym-700 hover:text-red-500 transition-colors flex-shrink-0 ml-2"
+                >
                     <Trash2 size={18}/>
                 </button>
             </div>
@@ -104,7 +178,7 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
             </button>
             <button 
             onClick={handleSave}
-            disabled={!sessionName || selectedExIds.length === 0}
+            disabled={!sessionName || items.length === 0}
             className="col-span-1 bg-gym-accent text-white rounded-xl flex items-center justify-center disabled:opacity-50 disabled:grayscale active:scale-95 transition-all shadow-lg shadow-orange-500/20"
             >
             <Save size={24} />
@@ -122,10 +196,7 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
             {Object.values(EXERCISES).map(ex => (
               <button
                 key={ex.id}
-                onClick={() => {
-                  setSelectedExIds([...selectedExIds, ex.id]);
-                  setIsSelectorOpen(false);
-                }}
+                onClick={() => addExercise(ex.id)}
                 className="w-full text-left p-4 border-b border-gym-700 hover:bg-gym-800 active:bg-gym-700 transition-colors flex justify-between items-center"
               >
                 <div>
