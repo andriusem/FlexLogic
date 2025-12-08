@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
-import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate } from './services/storageService';
+import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -11,8 +11,13 @@ import { ScheduleView } from './components/ScheduleView';
 import { ProgressView } from './components/ProgressView';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'planner' | 'active' | 'schedule' | 'progress'>('home');
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  // Initialize state from local storage draft if available to handle reloads/crashes
+  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(() => getActiveSessionDraft());
+  const [view, setView] = useState<'home' | 'planner' | 'active' | 'schedule' | 'progress'>(() => {
+    // If we have a draft, force view to active immediately
+    return getActiveSessionDraft() ? 'active' : 'home';
+  });
+
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
@@ -20,9 +25,20 @@ const App: React.FC = () => {
   const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
+  // Ref to track if initial load is done to prevent overwriting draft with null on first render if async issues existed (though useState initializer handles it)
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     refreshData();
   }, [view]);
+
+  // Auto-save draft whenever activeSession changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+    }
+    saveActiveSessionDraft(activeSession);
+  }, [activeSession]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -206,6 +222,8 @@ const App: React.FC = () => {
       }
 
       saveSession({ ...activeSession, completed: true, duration: durationSeconds });
+      
+      // Clear active session (this will also clear draft via useEffect)
       setActiveSession(null);
       setView('home');
     }
@@ -217,7 +235,7 @@ const App: React.FC = () => {
 
   const confirmCancelSession = () => {
     setShowExitConfirmation(false);
-    setActiveSession(null);
+    setActiveSession(null); // This clears draft via useEffect
     setView('home');
   };
 
@@ -355,7 +373,7 @@ const App: React.FC = () => {
             <button 
                 type="button"
                 onClick={requestCancelSession}
-                className="p-2 -ml-2 text-gym-muted hover:text-gym-text rounded-full hover:bg-gym-800 transition-colors flex-shrink-0"
+                className="w-10 h-10 flex items-center justify-center rounded-full text-gym-muted hover:text-white hover:bg-gym-800 active:bg-gym-700 transition-colors z-50 cursor-pointer"
                 aria-label="Cancel Session"
             >
                 <X size={24} />
@@ -402,7 +420,7 @@ const App: React.FC = () => {
 
         {/* Exit Confirmation Modal */}
         {showExitConfirmation && (
-            <div className="fixed inset-0 bg-gym-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+            <div className="fixed inset-0 bg-gym-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
                 <div className="bg-gym-800 w-full max-w-sm rounded-2xl border border-gym-700 shadow-2xl overflow-hidden p-6 text-center">
                     <div className="w-16 h-16 bg-gym-warning/10 text-gym-warning rounded-full flex items-center justify-center mx-auto mb-4">
                         <AlertTriangle size={32} />

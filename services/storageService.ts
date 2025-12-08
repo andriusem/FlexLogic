@@ -6,7 +6,8 @@ const KEYS = {
   SESSIONS: 'flexlogic_sessions',
   TEMPLATES: 'flexlogic_templates',
   HISTORY: 'flexlogic_history',
-  SCHEDULE: 'flexlogic_schedule'
+  SCHEDULE: 'flexlogic_schedule',
+  ACTIVE_SESSION: 'flexlogic_active_session_draft'
 };
 
 export const getTemplates = (): SessionTemplate[] => {
@@ -90,4 +91,18 @@ export const saveScheduledSession = (scheduled: ScheduledSession) => {
 export const removeScheduledSession = (date: string) => {
   const schedule = getScheduledSessions().filter(s => s.date !== date);
   localStorage.setItem(KEYS.SCHEDULE, JSON.stringify(schedule));
+};
+
+// Active Session Draft Handling (Auto-Save)
+export const saveActiveSessionDraft = (session: WorkoutSession | null) => {
+  if (session) {
+    localStorage.setItem(KEYS.ACTIVE_SESSION, JSON.stringify(session));
+  } else {
+    localStorage.removeItem(KEYS.ACTIVE_SESSION);
+  }
+};
+
+export const getActiveSessionDraft = (): WorkoutSession | null => {
+  const stored = localStorage.getItem(KEYS.ACTIVE_SESSION);
+  return stored ? JSON.parse(stored) : null;
 };
