@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock } from 'lucide-react';
+import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
 import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
@@ -17,6 +17,8 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
+  const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
+  const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   useEffect(() => {
     refreshData();
@@ -85,7 +87,7 @@ const App: React.FC = () => {
     });
   };
 
-  const startSession = (template: SessionTemplate) => {
+  const startSession = (template: SessionTemplate, customDate?: Date) => {
     const rawExercises: ExerciseSessionLog[] = template.exerciseIds.map((exId, idx) => {
       // 1. Get History
       const lastLog = getLastLogForExercise(exId);
@@ -114,16 +116,21 @@ const App: React.FC = () => {
 
     const adjustedExercises = recalculateSessionWeights(rawExercises);
 
+    // If customDate is provided, use it. Otherwise use now.
+    const sessionDate = customDate ? customDate.toISOString() : new Date().toISOString();
+
     const newSession: WorkoutSession = {
       id: `ses-${Date.now()}`,
       name: template.name,
-      date: new Date().toISOString(),
+      date: sessionDate,
       completed: false,
       duration: 0,
-      exercises: adjustedExercises
+      exercises: adjustedExercises,
+      isHistorical: !!customDate
     };
     setActiveSession(newSession);
     setView('active');
+    setHistoricalDate(null); // Close modal if open
   };
 
   const updateActiveLog = (updatedLog: ExerciseSessionLog) => {
@@ -189,15 +196,29 @@ const App: React.FC = () => {
 
   const finishSession = () => {
     if (activeSession) {
-      // Calculate duration based on start time
-      const startTime = new Date(activeSession.date).getTime();
-      const endTime = Date.now();
-      const durationSeconds = Math.floor((endTime - startTime) / 1000);
+      let durationSeconds = 0;
+      
+      // Only calculate duration if it's NOT a historical log
+      if (!activeSession.isHistorical) {
+          const startTime = new Date(activeSession.date).getTime();
+          const endTime = Date.now();
+          durationSeconds = Math.floor((endTime - startTime) / 1000);
+      }
 
       saveSession({ ...activeSession, completed: true, duration: durationSeconds });
       setActiveSession(null);
       setView('home');
     }
+  };
+
+  const requestCancelSession = () => {
+    setShowExitConfirmation(true);
+  };
+
+  const confirmCancelSession = () => {
+    setShowExitConfirmation(false);
+    setActiveSession(null);
+    setView('home');
   };
 
   const handleEditTemplate = (tpl: SessionTemplate) => {
@@ -229,6 +250,19 @@ const App: React.FC = () => {
     }
     setIsTemplateSelectorOpen(false);
     setView('planner');
+  };
+
+  const handleDayClick = (day: Date) => {
+    // Check if it is today
+    const today = new Date();
+    const isToday = day.getDate() === today.getDate() && 
+                    day.getMonth() === today.getMonth() && 
+                    day.getFullYear() === today.getFullYear();
+    
+    // If it is today, do not open historical log view
+    if (isToday) return;
+
+    setHistoricalDate(day);
   };
 
   // Render Navbar Helper
@@ -311,20 +345,36 @@ const App: React.FC = () => {
 
   if (view === 'active' && activeSession) {
     const exercisesSorted = [...activeSession.exercises].sort((a, b) => a.order - b.order);
+    const isHistorical = activeSession.isHistorical;
     
     return (
-      <div className="min-h-screen bg-gym-900 pb-20">
-        <header className="sticky top-0 bg-gym-900/90 backdrop-blur-md z-10 px-4 py-3 border-b border-gym-700 relative flex justify-center items-center shadow-sm h-16">
+      <div className="min-h-screen bg-gym-900 pb-20 relative">
+        <header className="sticky top-0 bg-gym-900/90 backdrop-blur-md z-10 px-4 py-3 border-b border-gym-700 relative flex justify-between items-center shadow-sm h-16">
           
-          {/* Absolute Left */}
-          <div className="absolute left-4 max-w-[50%]">
-            <h1 className="text-gym-text font-bold text-lg truncate leading-tight">{activeSession.name}</h1>
+          <div className="flex items-center gap-3 flex-1 min-w-0 mr-2">
+            <button 
+                type="button"
+                onClick={requestCancelSession}
+                className="p-2 -ml-2 text-gym-muted hover:text-gym-text rounded-full hover:bg-gym-800 transition-colors flex-shrink-0"
+                aria-label="Cancel Session"
+            >
+                <X size={24} />
+            </button>
+            <div className="flex flex-col min-w-0 overflow-hidden">
+                <h1 className="text-gym-text font-bold text-lg truncate leading-tight">{activeSession.name}</h1>
+                {isHistorical && <span className="text-[10px] bg-gym-accent text-white px-1.5 py-0.5 rounded font-bold uppercase w-fit">Log Mode</span>}
+            </div>
           </div>
 
-          {/* Absolute Right */}
-          <div className="absolute right-4">
-            <button onClick={finishSession} className="bg-gym-success text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all active:scale-95">
-              Finish
+          <div className="flex-shrink-0">
+            <button 
+                onClick={finishSession} 
+                className={`text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg transition-all active:scale-95 flex items-center gap-2
+                ${isHistorical ? 'bg-gym-secondary hover:bg-gym-accent shadow-orange-500/20' : 'bg-gym-success hover:bg-green-600 shadow-green-500/20'}
+                `}
+            >
+              {isHistorical ? <Save size={16} /> : null}
+              {isHistorical ? 'Save Log' : 'Finish'}
             </button>
           </div>
         </header>
@@ -349,6 +399,34 @@ const App: React.FC = () => {
              </button>
           </div>
         </div>
+
+        {/* Exit Confirmation Modal */}
+        {showExitConfirmation && (
+            <div className="fixed inset-0 bg-gym-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
+                <div className="bg-gym-800 w-full max-w-sm rounded-2xl border border-gym-700 shadow-2xl overflow-hidden p-6 text-center">
+                    <div className="w-16 h-16 bg-gym-warning/10 text-gym-warning rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-gym-text mb-2">Exit Session?</h3>
+                    <p className="text-gym-muted mb-6">Progress for this session will be lost if you exit without finishing.</p>
+                    
+                    <div className="flex gap-3">
+                        <button 
+                            onClick={() => setShowExitConfirmation(false)}
+                            className="flex-1 py-3 font-bold text-gym-text bg-gym-700 rounded-xl hover:bg-gym-600 transition-colors"
+                        >
+                            Stay
+                        </button>
+                        <button 
+                            onClick={confirmCancelSession}
+                            className="flex-1 py-3 font-bold text-white bg-gym-danger rounded-xl hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+                        >
+                            Exit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
       </div>
     );
   }
@@ -380,11 +458,15 @@ const App: React.FC = () => {
                const hasSession = sessions.some(s => s.date.startsWith(day.toISOString().split('T')[0]));
                
                return (
-                 <div key={i} className={`h-16 rounded-lg flex flex-col items-center justify-center border transition-colors ${isToday ? 'border-gym-accent bg-gym-800 shadow-md' : 'border-transparent bg-gym-800/50'}`}>
+                 <button 
+                    key={i} 
+                    onClick={() => handleDayClick(day)}
+                    className={`h-16 rounded-lg flex flex-col items-center justify-center border transition-all active:scale-95 ${isToday ? 'border-gym-accent bg-gym-800 shadow-md' : 'border-transparent bg-gym-800/50 hover:bg-gym-800 hover:border-gym-700'}`}
+                 >
                    <span className="text-[10px] uppercase text-gym-muted font-bold">{day.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
                    <span className={`font-bold text-sm ${hasSession ? 'text-gym-success' : 'text-gym-text'}`}>{day.getDate()}</span>
                    {hasSession && <div className="w-1 h-1 rounded-full bg-gym-success mt-1"></div>}
-                 </div>
+                 </button>
                );
              })}
            </div>
@@ -485,6 +567,51 @@ const App: React.FC = () => {
                          <span className="font-bold text-gym-text">Start from Scratch</span>
                          <Plus size={20} />
                     </button>
+                </div>
+            </div>
+        </div>
+      )}
+      
+      {/* Historical Log Modal */}
+      {historicalDate && (
+        <div className="fixed inset-0 bg-gym-900 z-[70] flex flex-col animate-in slide-in-from-bottom duration-300">
+            <div className="bg-gym-800 p-4 pt-10 flex justify-between items-center shadow-sm border-b border-gym-700">
+                <div>
+                    <h2 className="text-xl font-bold text-gym-text">Log Past Workout</h2>
+                    <p className="text-sm text-gym-muted flex items-center gap-2">
+                        <Calendar size={14} /> {historicalDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </p>
+                </div>
+                <button onClick={() => setHistoricalDate(null)} className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600">
+                    <X size={20} />
+                </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+                <div className="mb-4">
+                    <h3 className="font-bold text-lg text-gym-text mb-2">Select Routine</h3>
+                    <p className="text-sm text-gym-muted">Choose a routine to log for this day.</p>
+                </div>
+
+                <div className="space-y-3">
+                    {templates.length === 0 ? (
+                    <div className="p-8 bg-gym-800 rounded-xl text-center border border-dashed border-gym-700">
+                        <p className="text-gym-muted">No routines available. Create one in the main view first.</p>
+                    </div>
+                    ) : (
+                    templates.map(tpl => (
+                        <SessionCard
+                        key={tpl.id}
+                        title={tpl.name}
+                        subtitle={`${tpl.exerciseIds.length} Exercises`}
+                        onStart={() => startSession(tpl, historicalDate)}
+                        actionIcon="plus"
+                        isTemplate
+                        onEdit={() => handleEditTemplate(tpl)}
+                        onDelete={() => handleDeleteTemplate(tpl.id)}
+                        />
+                    ))
+                    )}
                 </div>
             </div>
         </div>

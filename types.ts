@@ -57,6 +57,7 @@ export interface WorkoutSession {
   completed: boolean;
   duration: number; // Duration in seconds
   exercises: ExerciseSessionLog[];
+  isHistorical?: boolean;
 }
 
 export interface SessionTemplate {

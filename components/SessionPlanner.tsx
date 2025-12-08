@@ -86,7 +86,13 @@ export const SessionPlanner: React.FC<Props> = ({ onClose, initialTemplate }) =>
     <div className="fixed inset-0 bg-gym-900 z-50 flex flex-col animate-in slide-in-from-bottom duration-300">
       <div className="bg-gym-800 p-4 pt-10 flex justify-between items-center shadow-sm border-b border-gym-700">
         <h2 className="text-xl font-bold text-gym-text">{initialTemplate ? 'Edit Routine' : 'Create Routine'}</h2>
-        <button onClick={onClose}><X className="text-gym-muted hover:text-gym-accent" /></button>
+        <button 
+            type="button"
+            onClick={onClose}
+            className="p-2 -mr-2 text-gym-muted hover:text-gym-accent rounded-full hover:bg-gym-700 transition-colors"
+        >
+            <X size={24} />
+        </button>
       </div>
 
       <div className="p-4 flex-1 flex flex-col overflow-hidden">

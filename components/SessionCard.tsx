@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { WorkoutSession, SessionTemplate } from '../types';
-import { Play, Edit, Trash2 } from 'lucide-react';
+import { Play, Edit, Trash2, Plus } from 'lucide-react';
 
 interface Props {
   title: string;
@@ -10,10 +10,12 @@ interface Props {
   onEdit?: () => void;
   onDelete?: () => void;
   isTemplate?: boolean;
+  actionIcon?: 'play' | 'plus';
 }
 
-export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit, onDelete, isTemplate }) => {
+export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit, onDelete, isTemplate, actionIcon = 'play' }) => {
   const [showOptions, setShowOptions] = useState(false);
+  const isPlus = actionIcon === 'plus';
 
   return (
     <div 
@@ -50,13 +52,19 @@ export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit,
           </div>
         )}
 
-        {/* Start Button - Always Visible */}
+        {/* Start/Log Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onStart(); }} 
-          className={`p-3 rounded-full text-white transition-all shadow-lg shadow-orange-500/20 flex-shrink-0 relative z-20 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`}
-          aria-label="Start Workout"
+          className={`
+            rounded-full transition-all shadow-lg flex-shrink-0 relative z-20 flex items-center justify-center
+            ${isPlus 
+                ? 'p-2.5 bg-white text-gym-accent border-2 border-gym-accent hover:bg-orange-50 shadow-orange-500/10' 
+                : `p-3 text-white shadow-orange-500/20 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`
+            }
+          `}
+          aria-label={isPlus ? "Log Workout" : "Start Workout"}
         >
-          <Play size={20} fill="currentColor" />
+          {isPlus ? <Plus size={18} strokeWidth={3} /> : <Play size={20} fill="currentColor" />}
         </button>
       </div>
     </div>
