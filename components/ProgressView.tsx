@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSessions } from '../services/storageService';
+import { getSessions, clearAllSessions, deleteSession, getSessionsAsync } from '../services/storageService';
 import { WorkoutSession, ExerciseSessionLog } from '../types';
 import { EXERCISES } from '../constants';
-import { Calendar, Clock, ChevronRight, X, Check, XCircle, RotateCw, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, X, Check, XCircle, RotateCw, TrendingUp, Trash2 } from 'lucide-react';
 
 // --- HELPER COMPONENTS ---
 
@@ -234,12 +234,48 @@ const DetailedExerciseCard: React.FC<DetailedExerciseCardProps> = ({ exLog, sess
 export const ProgressView: React.FC = () => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [detailedSession, setDetailedSession] = useState<WorkoutSession | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get completed sessions sorted by date descending
-    const allSessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setSessions(allSessions);
+    // Load sessions from Supabase (cloud-first)
+    const loadSessions = async () => {
+      setIsLoading(true);
+      try {
+        const cloudSessions = await getSessionsAsync();
+        const completedSessions = cloudSessions.filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setSessions(completedSessions);
+      } catch (err) {
+        console.error('Failed to load sessions:', err);
+        // Fallback to local
+        const allSessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setSessions(allSessions);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSessions();
   }, []);
+
+  const handleDeleteSession = async (id: string) => {
+    const result = await deleteSession(id);
+    if (result.success) {
+      setSessions(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  const handleClearHistory = async () => {
+    setIsClearing(true);
+    const result = await clearAllSessions();
+    if (result.success) {
+      setSessions([]);
+    }
+    alert(result.message);
+    setIsClearing(false);
+    setShowClearConfirm(false);
+  };
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -256,9 +292,45 @@ export const ProgressView: React.FC = () => {
       </header>
 
       {/* History List */}
-      <h2 className="font-bold text-lg mb-4 flex items-center gap-2 text-gym-text">
-        <Calendar size={20} className="text-gym-muted" /> Workout History
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="font-bold text-lg flex items-center gap-2 text-gym-text">
+          <Calendar size={20} className="text-gym-muted" /> Workout History
+        </h2>
+        {sessions.length > 0 && (
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1 px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+          >
+            <Trash2 size={14} /> Clear
+          </button>
+        )}
+      </div>
+
+      {/* Clear Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-gym-900/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-gym-800 rounded-2xl border border-gym-700 shadow-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-bold text-gym-text mb-2">Clear Workout History?</h3>
+            <p className="text-gym-muted text-sm mb-6">This will permanently delete all {sessions.length} workout sessions. This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={isClearing}
+                className="flex-1 py-2 px-4 bg-gym-700 text-gym-text rounded-lg hover:bg-gym-600 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClearHistory}
+                disabled={isClearing}
+                className="flex-1 py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isClearing ? 'Clearing...' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {sessions.length === 0 ? (
@@ -267,21 +339,35 @@ export const ProgressView: React.FC = () => {
           </div>
         ) : (
           sessions.map(session => (
-            <button 
+            <div 
               key={session.id} 
-              onClick={() => setDetailedSession(session)}
-              className="w-full text-left bg-gym-800 rounded-xl p-4 border border-gym-700 flex flex-col gap-3 hover:bg-gym-800/80 active:scale-[0.99] transition-all group"
+              className="w-full text-left bg-gym-800 rounded-xl p-4 border border-gym-700 flex flex-col gap-3 hover:bg-gym-800/80 transition-all group"
             >
               <div className="flex justify-between items-start border-b border-gym-700 pb-3 w-full">
-                <div>
+                <button 
+                  onClick={() => setDetailedSession(session)}
+                  className="flex-1 text-left"
+                >
                   <h3 className="font-bold text-gym-text text-lg group-hover:text-gym-accent transition-colors">{session.name}</h3>
                   <p className="text-xs text-gym-muted flex items-center gap-1 mt-1">
                     <Clock size={12} /> {new Date(session.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     <span className="mx-1">•</span> 
                     <span className="text-gym-text font-bold bg-gym-700 px-1.5 rounded">{session.duration ? formatTime(session.duration) : 'N/A'}</span>
                   </p>
-                </div>
+                </button>
                 <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this workout?')) {
+                          handleDeleteSession(session.id);
+                        }
+                      }}
+                      className="p-1.5 text-gym-muted hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                      title="Delete workout"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                     <div className="bg-gym-success/20 text-gym-success text-xs font-bold px-2 py-1 rounded">
                     Done
                     </div>
@@ -313,7 +399,7 @@ export const ProgressView: React.FC = () => {
                     </div>
                 )}
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>

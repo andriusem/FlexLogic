@@ -103,6 +103,32 @@ export const saveSessionToSupabase = async (session: WorkoutSession): Promise<bo
   return true;
 };
 
+export const clearAllSessionsFromSupabase = async (): Promise<boolean> => {
+  const { error } = await supabase
+    .from('sessions')
+    .delete()
+    .neq('id', ''); // Delete all rows
+  
+  if (error) {
+    console.error('Error clearing sessions:', error);
+    return false;
+  }
+  return true;
+};
+
+export const deleteSessionFromSupabase = async (id: string): Promise<boolean> => {
+  const { error } = await supabase
+    .from('sessions')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error deleting session:', error);
+    return false;
+  }
+  return true;
+};
+
 // ============ SCHEDULED SESSIONS ============
 
 export const fetchScheduledSessionsFromSupabase = async (): Promise<ScheduledSession[]> => {

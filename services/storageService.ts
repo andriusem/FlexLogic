@@ -7,6 +7,8 @@ import {
   deleteTemplateFromSupabase,
   fetchSessionsFromSupabase,
   saveSessionToSupabase,
+  clearAllSessionsFromSupabase,
+  deleteSessionFromSupabase,
   fetchScheduledSessionsFromSupabase,
   saveScheduledSessionToSupabase,
   removeScheduledSessionFromSupabase,
@@ -94,6 +96,29 @@ export const saveSession = (session: WorkoutSession) => {
   localStorage.setItem(KEYS.SESSIONS, JSON.stringify(sessions));
   // Sync to cloud in background
   saveSessionToSupabase(session).catch(err => console.error('Cloud sync failed:', err));
+};
+
+export const clearAllSessions = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    localStorage.removeItem(KEYS.SESSIONS);
+    await clearAllSessionsFromSupabase();
+    return { success: true, message: 'Workout history cleared successfully!' };
+  } catch (err) {
+    console.error('Failed to clear sessions:', err);
+    return { success: false, message: 'Failed to clear workout history.' };
+  }
+};
+
+export const deleteSession = async (id: string): Promise<{ success: boolean; message: string }> => {
+  try {
+    const sessions = getSessions().filter(s => s.id !== id);
+    localStorage.setItem(KEYS.SESSIONS, JSON.stringify(sessions));
+    await deleteSessionFromSupabase(id);
+    return { success: true, message: 'Workout deleted successfully!' };
+  } catch (err) {
+    console.error('Failed to delete session:', err);
+    return { success: false, message: 'Failed to delete workout.' };
+  }
 };
 
 export const getLastSessionForTemplate = (templateId: string): WorkoutSession | null => {
