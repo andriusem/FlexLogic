@@ -233,9 +233,10 @@ const DetailedExerciseCard: React.FC<DetailedExerciseCardProps> = ({ exLog, sess
 
 interface Props {
   onEdit: (session: WorkoutSession) => void;
+  initialSessionId?: string | null;
 }
 
-export const ProgressView: React.FC<Props> = ({ onEdit }) => {
+export const ProgressView: React.FC<Props> = ({ onEdit, initialSessionId }) => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [detailedSession, setDetailedSession] = useState<WorkoutSession | null>(null);
 
@@ -243,7 +244,14 @@ export const ProgressView: React.FC<Props> = ({ onEdit }) => {
     // Get completed sessions sorted by date descending
     const allSessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setSessions(allSessions);
-  }, []);
+
+    if (initialSessionId) {
+        const found = allSessions.find(s => s.id === initialSessionId);
+        if (found) {
+            setDetailedSession(found);
+        }
+    }
+  }, [initialSessionId]);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);

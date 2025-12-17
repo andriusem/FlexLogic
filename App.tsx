@@ -28,6 +28,8 @@ const App: React.FC = () => {
     // If we have a draft, force view to active immediately
     return getActiveSessionDraft() ? 'active' : 'home';
   });
+  
+  const [viewSessionId, setViewSessionId] = useState<string | null>(null);
 
   const [templates, setTemplates] = useState<SessionTemplate[]>([]);
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
@@ -405,6 +407,11 @@ const App: React.FC = () => {
     setHistoricalDate(day);
   };
 
+  const handleRecentActivityClick = (sessionId: string) => {
+    setViewSessionId(sessionId);
+    setView('progress');
+  };
+
   // Render Navbar Helper
   const renderNavbar = () => (
     <nav className="fixed bottom-0 left-0 right-0 bg-gym-900/95 backdrop-blur border-t border-gym-700 p-2 pb-6 flex justify-around z-50 shadow-[0_-5px_20px_rgba(247,230,202,0.3)]">
@@ -437,7 +444,7 @@ const App: React.FC = () => {
         </button>
 
         <button 
-          onClick={() => setView('progress')}
+          onClick={() => { setView('progress'); setViewSessionId(null); }}
           className="flex flex-col items-center justify-center w-16 group"
         >
           <div className={`p-1.5 rounded-lg border-2 transition-all duration-200 mb-1 ${
@@ -477,7 +484,7 @@ const App: React.FC = () => {
   if (view === 'progress') {
     return (
       <div className="relative">
-        <ProgressView onEdit={editSession} />
+        <ProgressView onEdit={editSession} initialSessionId={viewSessionId} />
         {renderNavbar()}
       </div>
     );
@@ -683,16 +690,23 @@ const App: React.FC = () => {
             <h2 className="font-bold text-lg mb-4 text-gym-text">Recent Activity</h2>
             <div className="space-y-3">
               {sessions.slice().reverse().slice(0, 3).map(s => (
-                <div key={s.id} className="bg-gym-800 p-4 rounded-xl border border-gym-700 flex justify-between items-center shadow-sm">
+                <button 
+                  key={s.id} 
+                  onClick={() => handleRecentActivityClick(s.id)}
+                  className="w-full text-left bg-gym-800 p-4 rounded-xl border border-gym-700 flex justify-between items-center shadow-sm hover:border-gym-accent hover:shadow-md transition-all group"
+                >
                    <div>
-                     <h4 className="font-bold text-gym-text">{s.name}</h4>
+                     <h4 className="font-bold text-gym-text group-hover:text-gym-accent transition-colors">{s.name}</h4>
                      <p className="text-xs text-gym-muted">{new Date(s.date).toLocaleDateString()}</p>
                    </div>
-                   <div className="text-right">
-                      <div className="text-gym-success font-bold text-sm">Completed</div>
-                      <div className="text-xs text-gym-muted">{s.duration ? formatTime(s.duration) : '~'}</div>
+                   <div className="text-right flex items-center gap-3">
+                      <div>
+                        <div className="text-gym-success font-bold text-sm">Completed</div>
+                        <div className="text-xs text-gym-muted">{s.duration ? formatTime(s.duration) : '~'}</div>
+                      </div>
+                      <ChevronRight size={18} className="text-gym-muted group-hover:text-gym-accent" />
                    </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
