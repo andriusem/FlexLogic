@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle } from 'lucide-react';
+import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
-import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft } from './services/storageService';
+import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -42,6 +42,23 @@ const App: React.FC = () => {
   
   // Ref to track if initial load is done to prevent overwriting draft with null on first render if async issues existed (though useState initializer handles it)
   const isInitialMount = useRef(true);
+
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+
+  useEffect(() => {
+    const syncFromCloud = async () => {
+      setIsCloudSyncing(true);
+      try {
+        await initializeFromCloud();
+        refreshData();
+      } catch (err) {
+        console.error('Cloud sync failed:', err);
+      } finally {
+        setIsCloudSyncing(false);
+      }
+    };
+    syncFromCloud();
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -266,6 +283,18 @@ const App: React.FC = () => {
     }
 
     // Apply fatigue logic again because muscle groups might have changed
+    newExercises = recalculateSessionWeights(newExercises);
+    setActiveSession({ ...activeSession, exercises: newExercises });
+  };
+
+  const handleDeleteExercise = (orderIndex: number) => {
+    if (!activeSession) return;
+    let newExercises = activeSession.exercises.filter(e => e.order !== orderIndex);
+    // Re-assign order values to be sequential
+    newExercises = newExercises
+      .sort((a, b) => a.order - b.order)
+      .map((e, i) => ({ ...e, order: i }));
+    // Recalculate weights based on new order
     newExercises = recalculateSessionWeights(newExercises);
     setActiveSession({ ...activeSession, exercises: newExercises });
   };
@@ -537,6 +566,7 @@ const App: React.FC = () => {
               onUpdateLog={updateActiveLog}
               onSwapExercise={handleSwapExercise}
               onReorderSwap={handleReorderSwap}
+              onDelete={handleDeleteExercise}
               isDragging={draggingIndex === i}
               dragHandlers={{
                 onDragStart: (e) => handleDragStart(e, i),
@@ -619,9 +649,24 @@ const App: React.FC = () => {
             <h1 className="text-3xl font-bold text-gym-secondary">FlexLogic</h1>
             <p className="text-gym-muted">Welcome back, Athlete.</p>
           </div>
-          <button className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700">
-            <Settings size={20} />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={async () => {
+                setIsCloudSyncing(true);
+                const result = await pushLocalDataToCloud();
+                alert(result.message);
+                setIsCloudSyncing(false);
+              }}
+              disabled={isCloudSyncing}
+              className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700 disabled:opacity-50"
+              title="Sync to Cloud"
+            >
+              {isCloudSyncing ? <RefreshCw size={20} className="animate-spin" /> : <Cloud size={20} />}
+            </button>
+            <button className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700">
+              <Settings size={20} />
+            </button>
+          </div>
         </header>
 
         {/* Weekly Calendar Mini-View */}

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSessions } from '../services/storageService';
+import { getSessions, getSessionsAsync } from '../services/storageService';
 import { WorkoutSession, ExerciseSessionLog } from '../types';
 import { EXERCISES } from '../constants';
 import { Calendar, Clock, ChevronRight, X, Check, XCircle, RotateCw, TrendingUp, Edit } from 'lucide-react';
@@ -239,18 +239,33 @@ interface Props {
 export const ProgressView: React.FC<Props> = ({ onEdit, initialSessionId }) => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [detailedSession, setDetailedSession] = useState<WorkoutSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get completed sessions sorted by date descending
-    const allSessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setSessions(allSessions);
+    // Load sessions from Supabase (cloud-first)
+    const loadSessions = async () => {
+      setIsLoading(true);
+      try {
+        const cloudSessions = await getSessionsAsync();
+        const completedSessions = cloudSessions.filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setSessions(completedSessions);
 
-    if (initialSessionId) {
-        const found = allSessions.find(s => s.id === initialSessionId);
-        if (found) {
+        if (initialSessionId) {
+          const found = completedSessions.find(s => s.id === initialSessionId);
+          if (found) {
             setDetailedSession(found);
+          }
         }
-    }
+      } catch (err) {
+        console.error('Failed to load sessions:', err);
+        // Fallback to local
+        const allSessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setSessions(allSessions);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadSessions();
   }, [initialSessionId]);
 
   const formatTime = (seconds: number) => {

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ExerciseSessionLog, SetLog, MuscleGroup, Equipment } from '../types';
 import { EXERCISES, WEIGHT_INCREMENT } from '../constants';
-import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical } from 'lucide-react';
+import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
 import { getAlternativeExercise } from '../services/geminiService';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   onUpdateLog: (updatedLog: ExerciseSessionLog) => void;
   onSwapExercise: (currentIndex: number, newExerciseId: string) => void;
   onReorderSwap: (fromIndex: number, toIndex: number) => void;
+  onDelete?: (index: number) => void;
   totalExercises: number;
   availableExercises: ExerciseSessionLog[];
   isDragging?: boolean;
@@ -27,6 +28,7 @@ export const ExerciseCard: React.FC<Props> = ({
   onUpdateLog, 
   onSwapExercise, 
   onReorderSwap,
+  onDelete,
   totalExercises,
   availableExercises,
   isDragging,
@@ -190,6 +192,19 @@ export const ExerciseCard: React.FC<Props> = ({
         >
            <RefreshCw size={18} />
          </button>
+         {onDelete && (
+           <button 
+             onClick={() => {
+               if (confirm(`Remove ${exercise.name} from this workout?`)) {
+                 onDelete(index);
+               }
+             }}
+             className="p-2 rounded-lg transition-colors flex-shrink-0 text-gym-muted hover:text-red-400 hover:bg-red-500/10"
+             title="Remove exercise"
+           >
+             <Trash2 size={18} />
+           </button>
+         )}
        </div>
 
        {/* Swap/Occupied Menu */}
