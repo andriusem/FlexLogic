@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { ExerciseSessionLog, SetLog, MuscleGroup, Equipment } from '../types';
 import { EXERCISES, WEIGHT_INCREMENT } from '../constants';
-import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus } from 'lucide-react';
+import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical } from 'lucide-react';
 import { getAlternativeExercise } from '../services/geminiService';
 
 interface Props {
@@ -12,6 +13,12 @@ interface Props {
   onReorderSwap: (fromIndex: number, toIndex: number) => void;
   totalExercises: number;
   availableExercises: ExerciseSessionLog[];
+  isDragging?: boolean;
+  dragHandlers?: {
+    onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd: () => void;
+  };
 }
 
 export const ExerciseCard: React.FC<Props> = ({ 
@@ -21,7 +28,9 @@ export const ExerciseCard: React.FC<Props> = ({
   onSwapExercise, 
   onReorderSwap,
   totalExercises,
-  availableExercises
+  availableExercises,
+  isDragging,
+  dragHandlers
 }) => {
   const exercise = EXERCISES[log.exerciseId];
   const [showSwapMenu, setShowSwapMenu] = useState(false);
@@ -141,25 +150,43 @@ export const ExerciseCard: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-gym-800 rounded-xl p-0 mb-4 border border-gym-700 shadow-sm relative overflow-hidden transition-all duration-300">
+    <div 
+        draggable={!!dragHandlers}
+        onDragStart={dragHandlers?.onDragStart}
+        onDragOver={dragHandlers?.onDragOver}
+        onDragEnd={dragHandlers?.onDragEnd}
+        className={`bg-gym-800 rounded-xl p-0 mb-4 border border-gym-700 shadow-sm relative overflow-hidden transition-all duration-300 
+            ${isDragging ? 'opacity-40 border-dashed border-gym-accent scale-[0.98]' : ''}
+        `}
+    >
        {/* Card Header */}
        <div className="flex justify-between items-start p-4 bg-gym-800">
-         <div>
-           <div className="flex items-center gap-2 mb-1">
-             <span className="text-[10px] font-bold text-white bg-gym-accent px-1.5 py-0.5 rounded">
-               #{index + 1}
-             </span>
-             <h4 className="text-gym-text font-bold text-lg leading-tight">{exercise.name}</h4>
-           </div>
-           <div className="flex items-center gap-2 text-gym-muted text-xs">
-             <span className="bg-gym-700 px-1.5 py-0.5 rounded text-gym-text">{exercise.equipment}</span>
-             <span>•</span>
-             <span>{exercise.muscleGroup}</span>
-           </div>
+         <div className="flex gap-3 flex-1">
+             {/* Drag Handle */}
+             {dragHandlers && (
+                 <div className="text-gym-muted hover:text-gym-accent cursor-grab active:cursor-grabbing mt-1 -ml-1 flex-shrink-0">
+                     <GripVertical size={20} />
+                 </div>
+             )}
+             
+             <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-white bg-gym-accent px-1.5 py-0.5 rounded flex-shrink-0">
+                    #{index + 1}
+                    </span>
+                    <h4 className="text-gym-text font-bold text-lg leading-tight truncate">{exercise.name}</h4>
+                </div>
+                <div className="flex items-center gap-2 text-gym-muted text-xs">
+                    <span className="bg-gym-700 px-1.5 py-0.5 rounded text-gym-text">{exercise.equipment}</span>
+                    <span>•</span>
+                    <span>{exercise.muscleGroup}</span>
+                </div>
+             </div>
          </div>
+         
          <button 
           onClick={() => setShowSwapMenu(!showSwapMenu)}
-          className={`p-2 rounded-lg transition-colors ${showSwapMenu ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ml-2 ${showSwapMenu ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
         >
            <RefreshCw size={18} />
          </button>

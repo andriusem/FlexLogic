@@ -42,6 +42,7 @@ export interface SetLog {
 }
 
 export interface ExerciseSessionLog {
+  uid?: string; // Unique identifier for drag-and-drop stability
   exerciseId: string;
   targetSets: number;
   targetReps: number;

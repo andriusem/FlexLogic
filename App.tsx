@@ -12,7 +12,18 @@ import { ProgressView } from './components/ProgressView';
 
 const App: React.FC = () => {
   // Initialize state from local storage draft if available to handle reloads/crashes
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(() => getActiveSessionDraft());
+  // Ensure we patch old drafts with UIDs for DnD stability
+  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(() => {
+    const draft = getActiveSessionDraft();
+    if (draft) {
+         draft.exercises = draft.exercises.map(e => ({
+            ...e, 
+            uid: e.uid || Math.random().toString(36).substr(2, 9)
+         }));
+    }
+    return draft;
+  });
+
   const [view, setView] = useState<'home' | 'planner' | 'active' | 'schedule' | 'progress'>(() => {
     // If we have a draft, force view to active immediately
     return getActiveSessionDraft() ? 'active' : 'home';
@@ -25,6 +36,7 @@ const App: React.FC = () => {
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
   const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   
   // Ref to track if initial load is done to prevent overwriting draft with null on first render if async issues existed (though useState initializer handles it)
   const isInitialMount = useRef(true);
@@ -118,6 +130,7 @@ const App: React.FC = () => {
       }
 
       return {
+        uid: Math.random().toString(36).substr(2, 9),
         exerciseId: exId,
         targetSets: template.defaultSets,
         targetReps: template.defaultReps,
@@ -170,6 +183,7 @@ const App: React.FC = () => {
         : 0;
 
     const newExercise: ExerciseSessionLog = {
+        uid: Math.random().toString(36).substr(2, 9),
         exerciseId: exerciseId,
         targetSets: 3, // Default for added exercise
         targetReps: 12,
@@ -252,6 +266,47 @@ const App: React.FC = () => {
       newExercises.sort((a, b) => a.order - b.order);
       setActiveSession({ ...activeSession, exercises: newExercises });
     }
+  };
+
+  // Drag and Drop Handlers for Active Session
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggingIndex(index);
+    // Required for Firefox
+    e.dataTransfer.setData("text/plain", index.toString());
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    if (!activeSession || draggingIndex === null || draggingIndex === index) return;
+
+    // Create a copy of the exercises sorted by their current order
+    const sortedExercises = [...activeSession.exercises].sort((a, b) => a.order - b.order);
+    
+    const draggedItem = sortedExercises[draggingIndex];
+    
+    // Remove from old position
+    sortedExercises.splice(draggingIndex, 1);
+    // Insert at new position
+    sortedExercises.splice(index, 0, draggedItem);
+
+    // Update order property for all to match new array indices
+    sortedExercises.forEach((ex, i) => {
+        ex.order = i;
+    });
+
+    // Recalculate weights based on new order (fatigue management)
+    const recalculated = recalculateSessionWeights(sortedExercises);
+
+    setActiveSession({
+        ...activeSession,
+        exercises: recalculated
+    });
+    setDraggingIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIndex(null);
   };
 
   const finishSession = () => {
@@ -442,9 +497,9 @@ const App: React.FC = () => {
         </header>
         
         <div className="p-4 space-y-4">
-          {exercisesSorted.map((log) => (
+          {exercisesSorted.map((log, i) => (
             <ExerciseCard
-              key={`${log.exerciseId}-${log.order}`}
+              key={log.uid || `${log.exerciseId}-${log.order}`}
               index={log.order}
               log={log}
               totalExercises={exercisesSorted.length}
@@ -452,6 +507,12 @@ const App: React.FC = () => {
               onUpdateLog={updateActiveLog}
               onSwapExercise={handleSwapExercise}
               onReorderSwap={handleReorderSwap}
+              isDragging={draggingIndex === i}
+              dragHandlers={{
+                onDragStart: (e) => handleDragStart(e, i),
+                onDragOver: (e) => handleDragOver(e, i),
+                onDragEnd: handleDragEnd
+              }}
             />
           ))}
           
