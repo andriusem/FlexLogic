@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { WorkoutSession, SessionTemplate } from '../types';
-import { Play, Edit, Trash2, Plus } from 'lucide-react';
+import { Play, Edit, Trash2, Plus, PenSquare } from 'lucide-react';
 
 interface Props {
   title: string;
@@ -10,12 +10,13 @@ interface Props {
   onEdit?: () => void;
   onDelete?: () => void;
   isTemplate?: boolean;
-  actionIcon?: 'play' | 'plus';
+  actionIcon?: 'play' | 'plus' | 'edit';
 }
 
 export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit, onDelete, isTemplate, actionIcon = 'play' }) => {
   const [showOptions, setShowOptions] = useState(false);
   const isPlus = actionIcon === 'plus';
+  const isEditIcon = actionIcon === 'edit';
 
   return (
     <div 
@@ -59,12 +60,14 @@ export const SessionCard: React.FC<Props> = ({ title, subtitle, onStart, onEdit,
             rounded-full transition-all shadow-lg flex-shrink-0 relative z-20 flex items-center justify-center
             ${isPlus 
                 ? 'p-2.5 bg-white text-gym-accent border-2 border-gym-accent hover:bg-orange-50 shadow-orange-500/10' 
-                : `p-3 text-white shadow-orange-500/20 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`
+                : isEditIcon
+                    ? 'p-3 bg-gym-secondary text-white hover:bg-gym-accent shadow-orange-500/20'
+                    : `p-3 text-white shadow-orange-500/20 ${showOptions ? 'bg-gym-secondary scale-110' : 'bg-gym-accent hover:bg-gym-secondary'}`
             }
           `}
-          aria-label={isPlus ? "Log Workout" : "Start Workout"}
+          aria-label={isPlus ? "Log Workout" : isEditIcon ? "Edit Log" : "Start Workout"}
         >
-          {isPlus ? <Plus size={18} strokeWidth={3} /> : <Play size={20} fill="currentColor" />}
+          {isPlus ? <Plus size={18} strokeWidth={3} /> : isEditIcon ? <PenSquare size={20} /> : <Play size={20} fill="currentColor" />}
         </button>
       </div>
     </div>

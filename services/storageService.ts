@@ -48,6 +48,11 @@ export const saveSession = (session: WorkoutSession) => {
   localStorage.setItem(KEYS.SESSIONS, JSON.stringify(sessions));
 };
 
+export const deleteSession = (sessionId: string) => {
+  const sessions = getSessions().filter(s => s.id !== sessionId);
+  localStorage.setItem(KEYS.SESSIONS, JSON.stringify(sessions));
+};
+
 export const getLastSessionForTemplate = (templateId: string): WorkoutSession | null => {
   const sessions = getSessions();
   const completed = sessions.filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
-import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft } from './services/storageService';
+import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -163,6 +163,26 @@ const App: React.FC = () => {
     setHistoricalDate(null); // Close modal if open
   };
 
+  const editSession = (session: WorkoutSession) => {
+    // Ensure UIDs exist for DnD
+    const sessionWithUids = {
+        ...session,
+        exercises: session.exercises.map(e => ({
+            ...e,
+            uid: e.uid || Math.random().toString(36).substr(2, 9)
+        })),
+        isHistorical: true
+    };
+    setActiveSession(sessionWithUids);
+    setView('active');
+    setHistoricalDate(null);
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+      deleteSession(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+  };
+
   const handleAddExerciseToSession = (exerciseId: string) => {
     if (!activeSession) return;
     
@@ -318,6 +338,9 @@ const App: React.FC = () => {
           const startTime = new Date(activeSession.date).getTime();
           const endTime = Date.now();
           durationSeconds = Math.floor((endTime - startTime) / 1000);
+      } else {
+        // Keep existing duration if editing
+        durationSeconds = activeSession.duration;
       }
 
       saveSession({ ...activeSession, completed: true, duration: durationSeconds });
@@ -738,8 +761,38 @@ const App: React.FC = () => {
             </div>
             
             <div className="p-6 overflow-y-auto">
+                {/* Existing Sessions for this Date */}
+                {sessions.filter(s => {
+                    const d = new Date(s.date);
+                    return d.getDate() === historicalDate.getDate() &&
+                           d.getMonth() === historicalDate.getMonth() &&
+                           d.getFullYear() === historicalDate.getFullYear();
+                }).length > 0 && (
+                    <div className="mb-6">
+                        <h3 className="font-bold text-lg text-gym-text mb-2">Completed Workouts</h3>
+                        <div className="space-y-3">
+                            {sessions.filter(s => {
+                                const d = new Date(s.date);
+                                return d.getDate() === historicalDate.getDate() &&
+                                    d.getMonth() === historicalDate.getMonth() &&
+                                    d.getFullYear() === historicalDate.getFullYear();
+                            }).map(s => (
+                                <SessionCard
+                                    key={s.id}
+                                    title={s.name}
+                                    subtitle={`${s.exercises.length} Exercises • ${s.completed ? 'Completed' : 'Incomplete'}`}
+                                    onStart={() => editSession(s)}
+                                    actionIcon="edit"
+                                    onDelete={() => handleDeleteSession(s.id)}
+                                />
+                            ))}
+                        </div>
+                        <div className="h-px bg-gym-700/50 my-4"></div>
+                    </div>
+                )}
+
                 <div className="mb-4">
-                    <h3 className="font-bold text-lg text-gym-text mb-2">Select Routine</h3>
+                    <h3 className="font-bold text-lg text-gym-text mb-2">Log New Routine</h3>
                     <p className="text-sm text-gym-muted">Choose a routine to log for this day.</p>
                 </div>
 
