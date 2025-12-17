@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, CloudOff, RefreshCw } from 'lucide-react';
+import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
-import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, getTemplatesAsync, getSessionsAsync, pushLocalDataToCloud } from './services/storageService';
+import { getTemplates, getSessions, saveSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -22,29 +22,12 @@ const App: React.FC = () => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
+  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
   const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   
   // Ref to track if initial load is done to prevent overwriting draft with null on first render if async issues existed (though useState initializer handles it)
   const isInitialMount = useRef(true);
-
-  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
-
-  // Initialize from cloud on first mount
-  useEffect(() => {
-    const syncFromCloud = async () => {
-      setIsCloudSyncing(true);
-      try {
-        await initializeFromCloud();
-        refreshData();
-      } catch (err) {
-        console.error('Cloud sync failed:', err);
-      } finally {
-        setIsCloudSyncing(false);
-      }
-    };
-    syncFromCloud();
-  }, []);
 
   useEffect(() => {
     refreshData();
@@ -165,6 +148,49 @@ const App: React.FC = () => {
     setActiveSession(newSession);
     setView('active');
     setHistoricalDate(null); // Close modal if open
+  };
+
+  const handleAddExerciseToSession = (exerciseId: string) => {
+    if (!activeSession) return;
+    
+    const exerciseDef = EXERCISES[exerciseId];
+    if (!exerciseDef) return;
+
+    // 1. Get History
+    const lastLog = getLastLogForExercise(exerciseId);
+    
+    // 2. Determine Base Weight
+    let baseWeight = lastLog ? (lastLog.baseWeight || lastLog.weight) : 20; 
+    if (lastLog && lastLog.success) {
+        baseWeight += WEIGHT_INCREMENT; 
+    }
+
+    const nextOrder = activeSession.exercises.length > 0 
+        ? Math.max(...activeSession.exercises.map(e => e.order)) + 1 
+        : 0;
+
+    const newExercise: ExerciseSessionLog = {
+        exerciseId: exerciseId,
+        targetSets: 3, // Default for added exercise
+        targetReps: 12,
+        order: nextOrder,
+        baseWeight: baseWeight,
+        sets: Array(3).fill(null).map(() => ({
+            repsCompleted: 0,
+            weight: baseWeight, 
+            completed: false
+        }))
+    };
+
+    // Append and Recalculate
+    let newExercises = [...activeSession.exercises, newExercise];
+    newExercises = recalculateSessionWeights(newExercises);
+    
+    setActiveSession({
+        ...activeSession,
+        exercises: newExercises
+    });
+    setIsAddExerciseOpen(false);
   };
 
   const updateActiveLog = (updatedLog: ExerciseSessionLog) => {
@@ -430,7 +456,9 @@ const App: React.FC = () => {
           ))}
           
           <div className="text-center p-4">
-             <button className="text-gym-muted text-sm flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-gym-700 rounded-xl hover:border-gym-accent hover:text-gym-accent bg-gym-800/50">
+             <button 
+               onClick={() => setIsAddExerciseOpen(true)}
+               className="text-gym-muted text-sm flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-gym-700 rounded-xl hover:border-gym-accent hover:text-gym-accent bg-gym-800/50">
                <Plus size={18} /> Add Exercise to Session
              </button>
           </div>
@@ -463,6 +491,31 @@ const App: React.FC = () => {
                 </div>
             </div>
         )}
+
+        {/* Add Exercise Modal for Active Session */}
+        {isAddExerciseOpen && (
+          <div className="fixed inset-0 bg-gym-900 z-[80] flex flex-col animate-in fade-in duration-200">
+            <div className="bg-gym-800 p-4 pt-10 flex justify-between items-center shadow-sm border-b border-gym-700">
+               <h3 className="text-gym-text font-bold">Add Exercise</h3>
+               <button onClick={() => setIsAddExerciseOpen(false)} className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600"><X size={20} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {Object.values(EXERCISES).map(ex => (
+                <button
+                  key={ex.id}
+                  onClick={() => handleAddExerciseToSession(ex.id)}
+                  className="w-full text-left p-4 border-b border-gym-700 hover:bg-gym-800 active:bg-gym-700 transition-colors flex justify-between items-center"
+                >
+                  <div>
+                      <div className="font-bold text-gym-text">{ex.name}</div>
+                      <div className="text-xs text-gym-muted mt-0.5">{ex.muscleGroup} • {ex.equipment}</div>
+                  </div>
+                  <Plus size={16} className="text-gym-accent"/>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -475,24 +528,9 @@ const App: React.FC = () => {
             <h1 className="text-3xl font-bold text-gym-secondary">FlexLogic</h1>
             <p className="text-gym-muted">Welcome back, Athlete.</p>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={async () => {
-                setIsCloudSyncing(true);
-                const result = await pushLocalDataToCloud();
-                alert(result.message);
-                setIsCloudSyncing(false);
-              }}
-              disabled={isCloudSyncing}
-              className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700 disabled:opacity-50"
-              title="Sync to Cloud"
-            >
-              {isCloudSyncing ? <RefreshCw size={20} className="animate-spin" /> : <Cloud size={20} />}
-            </button>
-            <button className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700">
-              <Settings size={20} />
-            </button>
-          </div>
+          <button className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700">
+            <Settings size={20} />
+          </button>
         </header>
 
         {/* Weekly Calendar Mini-View */}
