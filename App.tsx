@@ -477,7 +477,7 @@ const App: React.FC = () => {
   if (view === 'progress') {
     return (
       <div className="relative">
-        <ProgressView />
+        <ProgressView onEdit={editSession} />
         {renderNavbar()}
       </div>
     );

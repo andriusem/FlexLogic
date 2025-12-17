@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getSessions } from '../services/storageService';
 import { WorkoutSession, ExerciseSessionLog } from '../types';
 import { EXERCISES } from '../constants';
-import { Calendar, Clock, ChevronRight, X, Check, XCircle, RotateCw, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, X, Check, XCircle, RotateCw, TrendingUp, Edit } from 'lucide-react';
 
 // --- HELPER COMPONENTS ---
 
@@ -231,7 +231,11 @@ const DetailedExerciseCard: React.FC<DetailedExerciseCardProps> = ({ exLog, sess
 
 // --- MAIN COMPONENT ---
 
-export const ProgressView: React.FC = () => {
+interface Props {
+  onEdit: (session: WorkoutSession) => void;
+}
+
+export const ProgressView: React.FC<Props> = ({ onEdit }) => {
   const [sessions, setSessions] = useState<WorkoutSession[]>([]);
   const [detailedSession, setDetailedSession] = useState<WorkoutSession | null>(null);
 
@@ -329,12 +333,21 @@ export const ProgressView: React.FC = () => {
                        <Calendar size={14}/> {new Date(detailedSession.date).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'})}
                     </p>
                  </div>
-                 <button 
-                    onClick={() => setDetailedSession(null)} 
-                    className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600 transition-colors"
-                 >
-                    <X size={20} />
-                 </button>
+                 <div className="flex gap-2">
+                    <button 
+                        onClick={() => onEdit(detailedSession)} 
+                        className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600 transition-colors"
+                        title="Edit Log"
+                     >
+                        <Edit size={20} />
+                     </button>
+                    <button 
+                        onClick={() => setDetailedSession(null)} 
+                        className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600 transition-colors"
+                    >
+                        <X size={20} />
+                    </button>
+                 </div>
              </div>
 
              {/* Content */}
