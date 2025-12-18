@@ -1,5 +1,5 @@
 
-import { WorkoutSession, SessionTemplate, ScheduledSession } from '../types';
+import { WorkoutSession, SessionTemplate, ScheduledSession, Exercise } from '../types';
 import { DEFAULT_TEMPLATES } from '../constants';
 import {
   fetchTemplatesFromSupabase,
@@ -22,7 +22,30 @@ const KEYS = {
   TEMPLATES: 'flexlogic_templates',
   HISTORY: 'flexlogic_history',
   SCHEDULE: 'flexlogic_schedule',
-  ACTIVE_SESSION: 'flexlogic_active_session_draft'
+  ACTIVE_SESSION: 'flexlogic_active_session_draft',
+  CUSTOM_EXERCISES: 'flexlogic_custom_exercises'
+};
+
+// Custom Exercises
+export const getCustomExercises = (): Exercise[] => {
+  const stored = localStorage.getItem(KEYS.CUSTOM_EXERCISES);
+  return stored ? JSON.parse(stored) : [];
+};
+
+export const saveCustomExercise = (exercise: Exercise) => {
+  const exercises = getCustomExercises();
+  const existingIndex = exercises.findIndex(e => e.id === exercise.id);
+  if (existingIndex >= 0) {
+    exercises[existingIndex] = exercise;
+  } else {
+    exercises.push(exercise);
+  }
+  localStorage.setItem(KEYS.CUSTOM_EXERCISES, JSON.stringify(exercises));
+};
+
+export const deleteCustomExercise = (id: string) => {
+  const exercises = getCustomExercises().filter(e => e.id !== id);
+  localStorage.setItem(KEYS.CUSTOM_EXERCISES, JSON.stringify(exercises));
 };
 
 export const getTemplates = (): SessionTemplate[] => {

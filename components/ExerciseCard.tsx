@@ -14,6 +14,7 @@ interface Props {
   onDelete?: (index: number) => void;
   totalExercises: number;
   availableExercises: ExerciseSessionLog[];
+  customExercises?: { id: string; name: string; muscleGroup: string; equipment: string }[];
   isDragging?: boolean;
   dragHandlers?: {
     onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -31,15 +32,16 @@ export const ExerciseCard: React.FC<Props> = ({
   onDelete,
   totalExercises,
   availableExercises,
+  customExercises = [],
   isDragging,
   dragHandlers
 }) => {
-  const exercise = EXERCISES[log.exerciseId];
+  const exercise = EXERCISES[log.exerciseId] || customExercises.find(e => e.id === log.exerciseId);
   const [showSwapMenu, setShowSwapMenu] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
 
-  if (!exercise) return <div className="text-red-500 p-4">Exercise definition missing for {log.exerciseId}</div>;
+  if (!exercise) return <div className="text-red-500 p-4">Exercise not found: {log.exerciseId}</div>;
 
   // Progressive Overload Logic (Visual Indicator)
   const isOverloadReady = log.sets.every(s => s.repsCompleted >= log.targetReps && s.completed);

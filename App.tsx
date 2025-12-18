@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
-import { WorkoutSession, SessionTemplate, ExerciseSessionLog } from './types';
-import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud } from './services/storageService';
+import { WorkoutSession, SessionTemplate, ExerciseSessionLog, Exercise, MuscleGroup, Equipment } from './types';
+import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -36,6 +36,11 @@ const App: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<SessionTemplate | null>(null);
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
+  const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState(false);
+  const [customExercises, setCustomExercises] = useState<Exercise[]>([]);
+  const [newExerciseName, setNewExerciseName] = useState('');
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState<string>('Chest');
+  const [newExerciseEquipment, setNewExerciseEquipment] = useState<string>('Machine');
   const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -83,6 +88,24 @@ const App: React.FC = () => {
   const refreshData = () => {
     setTemplates(getTemplates());
     setSessions(getSessions());
+    setCustomExercises(getCustomExercises());
+  };
+
+  const handleCreateExercise = () => {
+    if (!newExerciseName.trim()) return;
+    const id = 'custom-' + Date.now();
+    const exercise: Exercise = {
+      id,
+      name: newExerciseName.trim(),
+      muscleGroup: newExerciseMuscle as MuscleGroup,
+      equipment: newExerciseEquipment as Equipment,
+      isCompound: false,
+      defaultAlternatives: []
+    };
+    saveCustomExercise(exercise);
+    setCustomExercises(getCustomExercises());
+    setNewExerciseName('');
+    setIsCreateExerciseOpen(false);
   };
 
   /**
@@ -205,7 +228,8 @@ const App: React.FC = () => {
   const handleAddExerciseToSession = (exerciseId: string) => {
     if (!activeSession) return;
     
-    const exerciseDef = EXERCISES[exerciseId];
+    // Look up in built-in exercises first, then custom exercises
+    const exerciseDef = EXERCISES[exerciseId] || customExercises.find(e => e.id === exerciseId);
     if (!exerciseDef) return;
 
     // 1. Get History
@@ -563,6 +587,7 @@ const App: React.FC = () => {
               log={log}
               totalExercises={exercisesSorted.length}
               availableExercises={exercisesSorted}
+              customExercises={customExercises}
               onUpdateLog={updateActiveLog}
               onSwapExercise={handleSwapExercise}
               onReorderSwap={handleReorderSwap}
@@ -618,22 +643,120 @@ const App: React.FC = () => {
           <div className="fixed inset-0 bg-gym-900 z-[80] flex flex-col animate-in fade-in duration-200">
             <div className="bg-gym-800 p-4 pt-10 flex justify-between items-center shadow-sm border-b border-gym-700">
                <h3 className="text-gym-text font-bold">Add Exercise</h3>
-               <button onClick={() => setIsAddExerciseOpen(false)} className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600"><X size={20} /></button>
+               <div className="flex gap-2">
+                 <button 
+                   onClick={() => setIsCreateExerciseOpen(true)} 
+                   className="px-3 py-2 bg-gym-accent text-white rounded-lg text-sm font-bold hover:bg-orange-600 flex items-center gap-1"
+                 >
+                   <Plus size={16} /> New
+                 </button>
+                 <button onClick={() => setIsAddExerciseOpen(false)} className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600"><X size={20} /></button>
+               </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {Object.values(EXERCISES).map(ex => (
-                <button
-                  key={ex.id}
-                  onClick={() => handleAddExerciseToSession(ex.id)}
-                  className="w-full text-left p-4 border-b border-gym-700 hover:bg-gym-800 active:bg-gym-700 transition-colors flex justify-between items-center"
-                >
-                  <div>
-                      <div className="font-bold text-gym-text">{ex.name}</div>
-                      <div className="text-xs text-gym-muted mt-0.5">{ex.muscleGroup} • {ex.equipment}</div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {(() => {
+                // Only show these muscle groups
+                const allowedGroups = ['Legs', 'Chest', 'Shoulders', 'Back', 'Lats', 'Upper Back', 'Triceps', 'Biceps', 'Core'];
+                // Combine built-in and custom exercises
+                const allExercises = [...Object.values(EXERCISES), ...customExercises];
+                // Group exercises by muscle group
+                const grouped: Record<string, Exercise[]> = {};
+                allExercises.forEach(ex => {
+                  if (!allowedGroups.includes(ex.muscleGroup)) return;
+                  // Consolidate back-related groups under "Back"
+                  const displayGroup = ['Lats', 'Upper Back', 'Lower Back'].includes(ex.muscleGroup) ? 'Back' : ex.muscleGroup;
+                  if (!grouped[displayGroup]) grouped[displayGroup] = [];
+                  grouped[displayGroup].push(ex);
+                });
+                // Custom sort order
+                const groupOrder = ['Chest', 'Back', 'Shoulders', 'Legs', 'Biceps', 'Triceps', 'Core'];
+                const sortedGroups = Object.keys(grouped).sort((a, b) => groupOrder.indexOf(a) - groupOrder.indexOf(b));
+                return sortedGroups.map(group => (
+                  <div key={group} className="mb-6">
+                    <h4 className="text-gym-accent font-bold text-sm uppercase tracking-wider mb-2 sticky top-0 bg-gym-900 py-2">{group}</h4>
+                    <div className="space-y-1">
+                      {grouped[group].sort((a, b) => a.name.localeCompare(b.name)).map(ex => (
+                        <button
+                          key={ex.id}
+                          onClick={() => handleAddExerciseToSession(ex.id)}
+                          className="w-full text-left p-3 rounded-lg bg-gym-800 border border-gym-700 hover:border-gym-accent active:bg-gym-700 transition-colors flex justify-between items-center"
+                        >
+                          <div>
+                            <div className="font-bold text-gym-text">{ex.name}</div>
+                            <div className="text-xs text-gym-muted mt-0.5">{ex.equipment}{ex.id.startsWith('custom-') ? ' • Custom' : ''}</div>
+                          </div>
+                          <Plus size={16} className="text-gym-accent"/>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <Plus size={16} className="text-gym-accent"/>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Create Custom Exercise Modal */}
+        {isCreateExerciseOpen && (
+          <div className="fixed inset-0 bg-black/70 z-[90] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-gym-800 rounded-xl w-full max-w-md border border-gym-700 shadow-xl">
+              <div className="p-4 border-b border-gym-700 flex justify-between items-center">
+                <h3 className="text-gym-text font-bold">Create Custom Exercise</h3>
+                <button onClick={() => setIsCreateExerciseOpen(false)} className="p-2 bg-gym-700 rounded-full text-gym-text hover:bg-gym-600"><X size={18} /></button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm text-gym-muted mb-1">Exercise Name</label>
+                  <input
+                    type="text"
+                    value={newExerciseName}
+                    onChange={(e) => setNewExerciseName(e.target.value)}
+                    placeholder="e.g. Incline Hammer Curls"
+                    className="w-full p-3 bg-gym-900 border border-gym-700 rounded-lg text-gym-text focus:border-gym-accent focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gym-muted mb-1">Muscle Group</label>
+                  <select
+                    value={newExerciseMuscle}
+                    onChange={(e) => setNewExerciseMuscle(e.target.value)}
+                    className="w-full p-3 bg-gym-900 border border-gym-700 rounded-lg text-gym-text focus:border-gym-accent focus:outline-none"
+                  >
+                    <option value="Chest">Chest</option>
+                    <option value="Back">Back</option>
+                    <option value="Lats">Back (Lats)</option>
+                    <option value="Upper Back">Back (Upper)</option>
+                    <option value="Shoulders">Shoulders</option>
+                    <option value="Legs">Legs</option>
+                    <option value="Biceps">Biceps</option>
+                    <option value="Triceps">Triceps</option>
+                    <option value="Core">Core / Abs</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gym-muted mb-1">Equipment</label>
+                  <select
+                    value={newExerciseEquipment}
+                    onChange={(e) => setNewExerciseEquipment(e.target.value)}
+                    className="w-full p-3 bg-gym-900 border border-gym-700 rounded-lg text-gym-text focus:border-gym-accent focus:outline-none"
+                  >
+                    <option value="Machine">Machine</option>
+                    <option value="Cable Machine">Cable Machine</option>
+                    <option value="Barbell">Barbell</option>
+                    <option value="Dumbbell">Dumbbell</option>
+                    <option value="Smith Machine">Smith Machine</option>
+                    <option value="Bodyweight">Bodyweight</option>
+                    <option value="Kettlebell">Kettlebell</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleCreateExercise}
+                  disabled={!newExerciseName.trim()}
+                  className="w-full py-3 bg-gym-accent text-white font-bold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Create Exercise
                 </button>
-              ))}
+              </div>
             </div>
           </div>
         )}
