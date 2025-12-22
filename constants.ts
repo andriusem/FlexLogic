@@ -147,4 +147,16 @@ export const DEFAULT_TEMPLATES: SessionTemplate[] = [
 ];
 
 export const WEIGHT_INCREMENT = 2.5;
+export const DUMBBELL_WEIGHT_INCREMENT = 2;
+export const DUMBBELL_MIN_WEIGHT = 4;
 export const FATIGUE_FACTOR = 0.05; // 5% weight reduction per slot moved down for compounds
+
+// Helper to get weight increment based on equipment type
+export const getWeightIncrement = (equipment: Equipment): number => {
+  return equipment === Equipment.DUMBBELL ? DUMBBELL_WEIGHT_INCREMENT : WEIGHT_INCREMENT;
+};
+
+// Helper to get minimum weight based on equipment type
+export const getMinWeight = (equipment: Equipment): number => {
+  return equipment === Equipment.DUMBBELL ? DUMBBELL_MIN_WEIGHT : 0;
+};

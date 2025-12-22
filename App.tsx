@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog, Exercise, MuscleGroup, Equipment } from './types';
 import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise } from './services/storageService';
-import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES } from './constants';
+import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES, getWeightIncrement, getMinWeight, DUMBBELL_MIN_WEIGHT } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
 import { SessionPlanner } from './components/SessionPlanner';
@@ -163,13 +163,23 @@ const App: React.FC = () => {
       // 1. Get History
       const lastLog = getLastLogForExercise(exId);
       
-      // 2. Determine Base Weight (Fresh Strength)
+      // 2. Get exercise definition to determine equipment-specific settings
+      const exerciseDef = EXERCISES[exId] || customExercises.find(e => e.id === exId);
+      const equipmentType = exerciseDef?.equipment as Equipment;
+      const weightIncrement = getWeightIncrement(equipmentType);
+      const minWeight = getMinWeight(equipmentType);
+      
+      // 3. Determine Base Weight (Fresh Strength)
       // If user successfully did 4x12 last time, we increase the BASE weight.
-      let baseWeight = lastLog ? (lastLog.baseWeight || lastLog.weight) : 20; // Default 20kg
+      // Default weight depends on equipment type (4kg min for dumbbells, 20kg for others)
+      let baseWeight = lastLog ? (lastLog.baseWeight || lastLog.weight) : (equipmentType === Equipment.DUMBBELL ? DUMBBELL_MIN_WEIGHT : 20);
       
       if (lastLog && lastLog.success) {
-        baseWeight += WEIGHT_INCREMENT; 
+        baseWeight += weightIncrement; 
       }
+      
+      // Ensure minimum weight
+      baseWeight = Math.max(minWeight, baseWeight);
 
       return {
         uid: Math.random().toString(36).substr(2, 9),
@@ -232,14 +242,22 @@ const App: React.FC = () => {
     const exerciseDef = EXERCISES[exerciseId] || customExercises.find(e => e.id === exerciseId);
     if (!exerciseDef) return;
 
-    // 1. Get History
+    // 1. Get equipment-specific settings
+    const equipmentType = exerciseDef.equipment as Equipment;
+    const weightIncrement = getWeightIncrement(equipmentType);
+    const minWeight = getMinWeight(equipmentType);
+
+    // 2. Get History
     const lastLog = getLastLogForExercise(exerciseId);
     
-    // 2. Determine Base Weight
-    let baseWeight = lastLog ? (lastLog.baseWeight || lastLog.weight) : 20; 
+    // 3. Determine Base Weight (4kg min for dumbbells, 20kg for others)
+    let baseWeight = lastLog ? (lastLog.baseWeight || lastLog.weight) : (equipmentType === Equipment.DUMBBELL ? DUMBBELL_MIN_WEIGHT : 20); 
     if (lastLog && lastLog.success) {
-        baseWeight += WEIGHT_INCREMENT; 
+        baseWeight += weightIncrement; 
     }
+    
+    // Ensure minimum weight
+    baseWeight = Math.max(minWeight, baseWeight);
 
     const nextOrder = activeSession.exercises.length > 0 
         ? Math.max(...activeSession.exercises.map(e => e.order)) + 1 

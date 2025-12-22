@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ExerciseSessionLog, SetLog, MuscleGroup, Equipment } from '../types';
-import { EXERCISES, WEIGHT_INCREMENT } from '../constants';
+import { EXERCISES, getWeightIncrement, getMinWeight } from '../constants';
 import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
 import { getAlternativeExercise } from '../services/geminiService';
 
@@ -75,6 +75,11 @@ export const ExerciseCard: React.FC<Props> = ({
     onUpdateLog({ ...log, sets: newSets });
   };
 
+  // Get equipment-specific weight increment and minimum
+  const equipmentType = exercise.equipment as Equipment;
+  const weightIncrement = getWeightIncrement(equipmentType);
+  const minWeight = getMinWeight(equipmentType);
+
   const adjustWeight = (delta: number) => {
     // Only adjust future/incomplete sets to preserve history of completed sets.
     // If we haven't started (index 0), adjust all.
@@ -91,7 +96,7 @@ export const ExerciseCard: React.FC<Props> = ({
     const newSets = log.sets.map((s, i) => {
         // Don't touch completed sets before the active one
         if (i < startIndex) return s; 
-        return { ...s, weight: Math.max(0, s.weight + delta) };
+        return { ...s, weight: Math.max(minWeight, s.weight + delta) };
     });
     onUpdateLog({ ...log, sets: newSets });
   };
@@ -295,7 +300,7 @@ export const ExerciseCard: React.FC<Props> = ({
                 <span className="text-gym-muted text-[10px] uppercase font-bold tracking-wider absolute top-2">Weight (Set {displayIndex + 1})</span>
                 <div className="flex items-center justify-between w-full mt-6 mb-1 px-0.5">
                   <button 
-                    onClick={() => adjustWeight(-WEIGHT_INCREMENT)} 
+                    onClick={() => adjustWeight(-weightIncrement)} 
                     className="p-1 text-gym-muted hover:text-gym-accent active:scale-90 transition-transform"
                     aria-label="Decrease weight"
                   >
@@ -303,7 +308,7 @@ export const ExerciseCard: React.FC<Props> = ({
                   </button>
                   <span className="text-2xl sm:text-3xl font-mono font-bold text-gym-text text-center tracking-tighter flex-1 truncate">{displayWeight}</span>
                   <button 
-                    onClick={() => adjustWeight(WEIGHT_INCREMENT)} 
+                    onClick={() => adjustWeight(weightIncrement)} 
                     className="p-1 text-gym-accent hover:text-gym-secondary active:scale-90 transition-transform"
                     aria-label="Increase weight"
                   >
