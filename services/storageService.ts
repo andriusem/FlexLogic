@@ -1,5 +1,5 @@
 
-import { WorkoutSession, SessionTemplate, ScheduledSession, Exercise } from '../types';
+import { WorkoutSession, SessionTemplate, ScheduledSession, Exercise, AppSettings } from '../types';
 import { DEFAULT_TEMPLATES } from '../constants';
 import {
   fetchTemplatesFromSupabase,
@@ -23,7 +23,31 @@ const KEYS = {
   HISTORY: 'flexlogic_history',
   SCHEDULE: 'flexlogic_schedule',
   ACTIVE_SESSION: 'flexlogic_active_session_draft',
-  CUSTOM_EXERCISES: 'flexlogic_custom_exercises'
+  CUSTOM_EXERCISES: 'flexlogic_custom_exercises',
+  SETTINGS: 'flexlogic_settings'
+};
+
+// Default settings
+const DEFAULT_SETTINGS: AppSettings = {
+  defaultSets: 4,
+  defaultReps: 12,
+  weightIncrement: 2.5,
+  dumbbellWeightIncrement: 2,
+  theme: 'dark'
+};
+
+// Settings
+export const getSettings = (): AppSettings => {
+  const stored = localStorage.getItem(KEYS.SETTINGS);
+  if (!stored) return DEFAULT_SETTINGS;
+  return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+};
+
+export const saveSettings = (settings: Partial<AppSettings>) => {
+  const current = getSettings();
+  const updated = { ...current, ...settings };
+  localStorage.setItem(KEYS.SETTINGS, JSON.stringify(updated));
+  return updated;
 };
 
 // Custom Exercises

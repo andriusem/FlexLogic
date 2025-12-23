@@ -73,3 +73,11 @@ export interface ScheduledSession {
   date: string; // YYYY-MM-DD
   templateId: string;
 }
+
+export interface AppSettings {
+  defaultSets: number;
+  defaultReps: number;
+  weightIncrement: number;
+  dumbbellWeightIncrement: number;
+  theme: 'dark' | 'light';
+}

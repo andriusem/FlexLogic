@@ -1,14 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
-import { WorkoutSession, SessionTemplate, ExerciseSessionLog, Exercise, MuscleGroup, Equipment } from './types';
-import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise } from './services/storageService';
+import { WorkoutSession, SessionTemplate, ExerciseSessionLog, Exercise, MuscleGroup, Equipment, AppSettings } from './types';
+import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise, getSettings } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES, getWeightIncrement, getMinWeight, DUMBBELL_MIN_WEIGHT } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
 import { SessionPlanner } from './components/SessionPlanner';
 import { ScheduleView } from './components/ScheduleView';
 import { ProgressView } from './components/ProgressView';
+import { SettingsView } from './components/SettingsView';
 
 const App: React.FC = () => {
   // Initialize state from local storage draft if available to handle reloads/crashes
@@ -44,6 +45,8 @@ const App: React.FC = () => {
   const [historicalDate, setHistoricalDate] = useState<Date | null>(null);
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [appSettings, setAppSettings] = useState<AppSettings>(getSettings());
   
   // Ref to track if initial load is done to prevent overwriting draft with null on first render if async issues existed (though useState initializer handles it)
   const isInitialMount = useRef(true);
@@ -266,11 +269,11 @@ const App: React.FC = () => {
     const newExercise: ExerciseSessionLog = {
         uid: Math.random().toString(36).substr(2, 9),
         exerciseId: exerciseId,
-        targetSets: 3, // Default for added exercise
-        targetReps: 12,
+        targetSets: appSettings.defaultSets,
+        targetReps: appSettings.defaultReps,
         order: nextOrder,
         baseWeight: baseWeight,
-        sets: Array(3).fill(null).map(() => ({
+        sets: Array(appSettings.defaultSets).fill(null).map(() => ({
             repsCompleted: 0,
             weight: baseWeight, 
             completed: false
@@ -783,7 +786,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gym-900 text-gym-text pb-24">
+    <div className={`min-h-screen pb-24 ${appSettings.theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-gym-900 text-gym-text'}`}>
       <div className="p-6 pt-10">
         <header className="mb-8 flex justify-between items-start">
           <div>
@@ -804,7 +807,10 @@ const App: React.FC = () => {
             >
               {isCloudSyncing ? <RefreshCw size={20} className="animate-spin" /> : <Cloud size={20} />}
             </button>
-            <button className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 bg-gym-800 rounded-full text-gym-muted hover:text-gym-accent border border-gym-700"
+            >
               <Settings size={20} />
             </button>
           </div>
@@ -1021,6 +1027,16 @@ const App: React.FC = () => {
       )}
 
       {renderNavbar()}
+
+      {/* Settings View */}
+      {isSettingsOpen && (
+        <SettingsView
+          onClose={() => setIsSettingsOpen(false)}
+          onSettingsChange={(settings) => setAppSettings(settings)}
+          customExercises={customExercises}
+          onCustomExercisesChange={() => setCustomExercises(getCustomExercises())}
+        />
+      )}
     </div>
   );
 };
