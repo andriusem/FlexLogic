@@ -166,22 +166,51 @@ export const getLastSessionForTemplate = (templateId: string): WorkoutSession | 
 // Returns the baseWeight if available, or the last used weight
 export const getLastLogForExercise = (exerciseId: string): { weight: number, success: boolean, baseWeight?: number } | null => {
   const sessions = getSessions().filter(s => s.completed).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
+
   for (const session of sessions) {
     const exLog = session.exercises.find(e => e.exerciseId === exerciseId);
     if (exLog) {
       const allRepsMet = exLog.sets.every(s => s.repsCompleted >= exLog.targetReps);
       // Use stored baseWeight if available, otherwise fallback to last set weight
       const weightToCheck = exLog.baseWeight || exLog.sets[exLog.sets.length - 1]?.weight || 0;
-      
-      return { 
+
+      return {
         weight: exLog.sets[exLog.sets.length - 1]?.weight || 0, // Actual weight used
         baseWeight: weightToCheck, // The theoretical strength
-        success: allRepsMet 
+        success: allRepsMet
       };
     }
   }
   return null;
+};
+
+// Get detailed history for an exercise including recent workouts
+export const getExerciseHistory = (exerciseId: string, limit: number = 5) => {
+  const sessions = getSessions()
+    .filter(s => s.completed && s.exercises.some(e => e.exerciseId === exerciseId))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, limit);
+
+  return sessions.map(session => {
+    const exLog = session.exercises.find(e => e.exerciseId === exerciseId)!;
+    const allRepsMet = exLog.sets.every(s => s.completed && s.repsCompleted >= exLog.targetReps);
+    const totalReps = exLog.sets.reduce((sum, s) => sum + s.repsCompleted, 0);
+    const avgWeight = exLog.sets.length > 0
+      ? exLog.sets.reduce((sum, s) => sum + s.weight, 0) / exLog.sets.length
+      : 0;
+
+    return {
+      date: session.date,
+      sessionName: session.name,
+      sets: exLog.sets,
+      targetSets: exLog.targetSets,
+      targetReps: exLog.targetReps,
+      baseWeight: exLog.baseWeight || avgWeight,
+      totalReps,
+      allRepsMet,
+      completedSets: exLog.sets.filter(s => s.completed).length
+    };
+  });
 };
 
 // Schedule Functions

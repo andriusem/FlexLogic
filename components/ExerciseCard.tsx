@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExerciseSessionLog, SetLog, MuscleGroup, Equipment } from '../types';
 import { EXERCISES, getWeightIncrement, getMinWeight } from '../constants';
-import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical, Trash2 } from 'lucide-react';
+import { Check, Dumbbell, RefreshCw, AlertCircle, X, Brain, ChevronDown, Plus, Minus, GripVertical, Trash2, History, TrendingUp, Calendar } from 'lucide-react';
 import { getAlternativeExercise } from '../services/geminiService';
 
 interface Props {
@@ -21,27 +21,42 @@ interface Props {
     onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
     onDragEnd: () => void;
   };
+  getExerciseHistory?: (exerciseId: string, limit?: number) => any[];
 }
 
-export const ExerciseCard: React.FC<Props> = ({ 
-  log, 
-  index, 
-  onUpdateLog, 
-  onSwapExercise, 
+export const ExerciseCard: React.FC<Props> = ({
+  log,
+  index,
+  onUpdateLog,
+  onSwapExercise,
   onReorderSwap,
   onDelete,
   totalExercises,
   availableExercises,
   customExercises = [],
   isDragging,
-  dragHandlers
+  dragHandlers,
+  getExerciseHistory
 }) => {
   const exercise = EXERCISES[log.exerciseId] || customExercises.find(e => e.id === log.exerciseId);
   const [showSwapMenu, setShowSwapMenu] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState<any[]>([]);
+
+  // Load history when component mounts or when history panel is opened
+  useEffect(() => {
+    if (showHistory && getExerciseHistory) {
+      const history = getExerciseHistory(log.exerciseId, 3);
+      setHistoryData(history);
+    }
+  }, [showHistory, log.exerciseId, getExerciseHistory]);
 
   if (!exercise) return <div className="text-red-500 p-4">Exercise not found: {log.exerciseId}</div>;
+
+  // Get last workout data for quick reference
+  const lastWorkout = getExerciseHistory ? getExerciseHistory(log.exerciseId, 1)[0] : null;
 
   // Progressive Overload Logic (Visual Indicator)
   const isOverloadReady = log.sets.every(s => s.repsCompleted >= log.targetReps && s.completed);
@@ -190,12 +205,27 @@ export const ExerciseCard: React.FC<Props> = ({
                     <span>•</span>
                     <span>{exercise.muscleGroup}</span>
                 </div>
+                {lastWorkout && (
+                  <div className="flex items-center gap-2 text-[10px] mt-1 text-gym-muted/80">
+                    <span>Last: {lastWorkout.baseWeight}kg × {lastWorkout.targetSets} sets</span>
+                    {lastWorkout.allRepsMet && (
+                      <span className="text-gym-success">✓</span>
+                    )}
+                  </div>
+                )}
              </div>
          </div>
-         
-         <button 
+
+         <button
+          onClick={() => setShowHistory(!showHistory)}
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ml-2 ${showHistory ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
+          title="View History"
+        >
+           <History size={18} />
+         </button>
+         <button
           onClick={() => setShowSwapMenu(!showSwapMenu)}
-          className={`p-2 rounded-lg transition-colors flex-shrink-0 ml-2 ${showSwapMenu ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${showSwapMenu ? 'bg-gym-700 text-gym-text' : 'text-gym-muted hover:text-gym-accent'}`}
         >
            <RefreshCw size={18} />
          </button>
@@ -213,6 +243,97 @@ export const ExerciseCard: React.FC<Props> = ({
            </button>
          )}
        </div>
+
+       {/* Exercise History Panel */}
+       {showHistory && (
+         <div className="bg-gym-900 border-y border-gym-700 p-4 animate-in slide-in-from-top duration-200">
+           <div className="flex justify-between items-center mb-3">
+             <h5 className="font-bold text-gym-text text-sm flex items-center gap-2">
+               <History size={16} />
+               Recent History
+             </h5>
+           </div>
+
+           {historyData.length === 0 ? (
+             <p className="text-xs text-gym-muted italic">No previous workouts found for this exercise.</p>
+           ) : (
+             <div className="space-y-3">
+               {historyData.map((workout, idx) => {
+                 const workoutDate = new Date(workout.date);
+                 const daysAgo = Math.floor((Date.now() - workoutDate.getTime()) / (1000 * 60 * 60 * 24));
+                 const dateStr = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`;
+
+                 // Calculate progress compared to current session
+                 const currentWeight = log.baseWeight || log.sets[0]?.weight || 0;
+                 const previousWeight = workout.baseWeight || 0;
+                 const weightDiff = currentWeight - previousWeight;
+                 const isProgress = weightDiff > 0;
+
+                 return (
+                   <div
+                     key={idx}
+                     className={`p-3 bg-gym-800 rounded-lg border ${idx === 0 ? 'border-gym-accent/50' : 'border-gym-700'}`}
+                   >
+                     {/* Header - Date and Progress Indicator */}
+                     <div className="flex justify-between items-start mb-2">
+                       <div className="flex items-center gap-2 text-[10px] text-gym-muted">
+                         <Calendar size={12} />
+                         <span>{dateStr}</span>
+                         {idx === 0 && (
+                           <span className="bg-gym-accent/20 text-gym-accent px-1.5 py-0.5 rounded font-bold">
+                             LAST
+                           </span>
+                         )}
+                       </div>
+                       {idx === 0 && weightDiff !== 0 && (
+                         <div className={`flex items-center gap-1 text-[10px] font-bold ${isProgress ? 'text-gym-success' : 'text-gym-danger'}`}>
+                           <TrendingUp size={12} className={isProgress ? '' : 'rotate-180'} />
+                           {isProgress ? '+' : ''}{weightDiff.toFixed(1)}kg
+                         </div>
+                       )}
+                     </div>
+
+                     {/* Session Name */}
+                     <div className="text-xs font-bold text-gym-text mb-2">
+                       {workout.sessionName}
+                     </div>
+
+                     {/* Sets Performance */}
+                     <div className="grid grid-cols-4 gap-1 mb-2">
+                       {workout.sets.map((set: any, setIdx: number) => (
+                         <div
+                           key={setIdx}
+                           className={`text-center py-1 rounded text-[10px] font-mono ${
+                             set.completed
+                               ? set.repsCompleted >= workout.targetReps
+                                 ? 'bg-gym-success/20 text-gym-success'
+                                 : 'bg-gym-warning/20 text-gym-warning'
+                               : 'bg-gym-700 text-gym-muted'
+                           }`}
+                         >
+                           {set.completed ? `${set.repsCompleted}×${set.weight}kg` : '-'}
+                         </div>
+                       ))}
+                     </div>
+
+                     {/* Summary Stats */}
+                     <div className="flex items-center justify-between text-[10px] text-gym-muted">
+                       <span>
+                         {workout.completedSets}/{workout.targetSets} sets • {workout.totalReps} total reps
+                       </span>
+                       {workout.allRepsMet && (
+                         <span className="text-gym-success flex items-center gap-1">
+                           <Check size={10} /> Target hit
+                         </span>
+                       )}
+                     </div>
+                   </div>
+                 );
+               })}
+             </div>
+           )}
+         </div>
+       )}
 
        {/* Swap/Occupied Menu */}
        {showSwapMenu && (

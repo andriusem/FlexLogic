@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dumbbell, Calendar, BarChart2, Plus, Settings, ChevronRight, Layout, X, Clock, Save, AlertTriangle, Cloud, RefreshCw } from 'lucide-react';
 import { WorkoutSession, SessionTemplate, ExerciseSessionLog, Exercise, MuscleGroup, Equipment, AppSettings } from './types';
-import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise, getSettings } from './services/storageService';
+import { getTemplates, getSessions, saveSession, deleteSession, getLastLogForExercise, getExerciseHistory, deleteTemplate, saveActiveSessionDraft, getActiveSessionDraft, initializeFromCloud, pushLocalDataToCloud, getCustomExercises, saveCustomExercise, getSettings } from './services/storageService';
 import { EXERCISES, FATIGUE_FACTOR, WEIGHT_INCREMENT, DEFAULT_TEMPLATES, getWeightIncrement, getMinWeight, DUMBBELL_MIN_WEIGHT } from './constants';
 import { SessionCard } from './components/SessionCard';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -619,6 +619,7 @@ const App: React.FC = () => {
                 onDragOver: (e) => handleDragOver(e, i),
                 onDragEnd: handleDragEnd
               }}
+              getExerciseHistory={getExerciseHistory}
             />
           ))}
           
